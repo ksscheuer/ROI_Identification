@@ -4,10 +4,11 @@ output: html_document
 ---
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
-setwd("G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
 ```
 
 ```{r}
+setwd("G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
+
 ########################## Set initial values###############################
 ############################################################################
 
@@ -145,6 +146,8 @@ pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
 
 ```{python}
 import numpy
+import matplotlib.pyplot as plt
+import pandas
 pixel_cluster_data = r.pixel_cluster_data
 width = len(pixel_cluster_data)
 height = len(pixel_cluster_data[0])
@@ -183,18 +186,58 @@ def check_cell(x, y, group_index, color):
     my_bound = combine_bound(my_bound,child_bound)
     return my_bound
   else:
-    cluster_results[y][x] = -1
     return None
   
 group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
+group_bound = []
   
 for i in range(0,width):
   for j in range(0,height):
     result = check_cell(i, j, group_index, 0)
-    print (group_index,result)
     if result is not None:
       group_index += 1
-    
+      group_bound.append(result)
+
+#print (group_bound)
+#print (len(group_bound))
+plt.matshow(cluster_results)
+plt.show()
+r.cluster_results = cluster_results    
 ```
+```{python}
+bound_limit = 3
+
+for i in range(0,len(group_bound)):
+  group = group_bound[i]
+  x_big = (group[1] - group[0]) > (bound_limit-1)
+  y_big = (group[3] - group[2]) > (bound_limit-1)
+  if x_big or y_big:
+    print (i,group,x_big,y_big,"is out of bounds.")
+    cluster_results[cluster_results == (i+1)] = 0 #0 vs 1 index mismatch ie counting from 0 here but index from 1 above
+
+r.cluster_results = cluster_results
+plt.matshow(cluster_results)
+plt.show()
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
