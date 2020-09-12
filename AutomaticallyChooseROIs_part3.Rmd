@@ -1,27 +1,26 @@
----
-title: "AutomaticallyChooseROIs_part2.0"
-output: html_document
----
+
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
 ```
 
 ```{r}
-setwd("G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
 
 ########################## Set initial values###############################
 ############################################################################
 
 k <- 3 #number of clusters chosen by hand based on silhouette plot
 SNRcutoff <- 4
+ROI_diameter_cutoff <- 3
 
 myslice <- "04-01"
 mydate <- "07-11-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
-saveclusterplot <- 0 #1 = save, 0 = don't save
-  clusterplotheight <- 5
-  clusterplotwidth <- 6.5
+## note that plots are saved in same location as this file, not working directory
+saveclusterplot <- 1 #1 = save, 0 = don't save
+  clusterplotheight <- 6
+  clusterplotwidth <- 6
 saveallpotentialroisplot <- 0 #1 = save, 0 = don't save
   allroiplotheight <- 5
   allroiplotwidth <- 6.5
@@ -35,6 +34,7 @@ savefinalroisplot <- 0 #1 = save, 0 = don't save
   finalroiplotheight <- 5
   finalroiplotwidth <- 6.5
 
+  
 #################### Read in data and load libraries #######################
 ############################################################################
 
@@ -53,6 +53,7 @@ myfiles <- read.csv("EachPixel_Data.csv",check.names = FALSE)
 
 electrodepixels <- read.csv("electrodepixels.csv",header=FALSE)
 electrodepixels <- electrodepixels+1 #photoZ starts counting with 0
+
 
 ############## Hierarchical clustering using chosen k ######################
 ############################################################################
@@ -96,6 +97,7 @@ if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
   clustercutoff <- 0
 }
 
+
 ######################### Plot clusters ####################################
 ############################################################################
 
@@ -118,33 +120,44 @@ ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
                        colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
   )
 
-# if (saveclusterplot==1) {
-#   ggsave("Step2_Clusters.jpg",height=plotheight,width=plotwidth)
-# }
-
-matrixplot <- function(matrix_to_plot, ptitle) {
-  longData<-melt(matrix_to_plot)
-  longData<-longData[!is.na(longData$value),]
-  ggplot(longData, aes(x = Var2, y = Var1)) + 
-    geom_tile(aes(fill=value)) + 
-    scale_fill_gradient(low="blue", high="red") +
-    labs(x="x", y="y", title=ptitle) +
-    scale_y_reverse() +
-    theme_bw() + theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
-                       axis.text.y=element_text(size=9),
-                       plot.title=element_text(size=11))
+if (saveclusterplot==1) {
+  ggsave("clusterplot.jpg",height=clusterplotheight,width=clusterplotwidth)
 }
 
-####################### Find all potential ROIs ############################
+# matrixplot <- function(matrix_to_plot, ptitle) {
+#   longData<-melt(matrix_to_plot)
+#   longData<-longData[!is.na(longData$value),]
+#   ggplot(longData, aes(x = Var2, y = Var1)) + 
+#     geom_tile(aes(fill=value)) + 
+#     scale_fill_gradient(low="blue", high="red") +
+#     labs(x="x", y="y", title=ptitle) +
+#     scale_y_reverse() +
+#     theme_bw() + theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
+#                        axis.text.y=element_text(size=9),
+#                        plot.title=element_text(size=11))
+# }
+
+
+############ Convert data to height x width representation #################
 ############################################################################
 height = 80
 width = 80
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
+pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
+myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
+for (i in 1:nrow(electrodepixels)) {
+  myfiles_df_cl_with_electrode$Electrode[which(myfiles_df_cl_with_electrode$PixelID==electrodepixels[i,1])] <- 1
+}
+electrode_data <- t(matrix(myfiles_df_cl_with_electrode$Electrode, ncol=width, nrow=height))
 ```
 
 
 ```{python}
+
+############ Identify each potential ROI and bounds for each ROI ###########
+############################################################################
+
 import numpy
 import matplotlib.pyplot as plt
 import pandas
@@ -205,7 +218,12 @@ plt.show()
 r.cluster_results = cluster_results    
 ```
 ```{python}
-bound_limit = 3
+
+############# Remove ROIs with diameter greater than cutoff ################
+############################################################################
+
+bound_limit = r.ROI_diameter_cutoff
+# bound_limit = 3
 
 for i in range(0,len(group_bound)):
   group = group_bound[i]
@@ -223,12 +241,20 @@ plt.show()
 ```
 
 ```{python}
+
+################ Separate remaining ROIs based on cluster ##################
+############################################################################
+
 pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 
 plt.matshow(pixel_cluster_data)
 plt.show()
 ```
 ```{python}
+
+##################### Remove ROIs that are touching ########################
+############################################################################
+
 visited_cells = numpy.zeros((width,height))
 def check_collisions(x,y,group_index):
   cell_value = cluster_results[y][x]
@@ -261,13 +287,95 @@ plt.show()
 
 ```
 ```{python}
+
+################ Separate remaining ROIs based on cluster ##################
+############################################################################
+
 pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 
 plt.matshow(pixel_cluster_data)
 plt.show()
 ```
+```{python}
+
+###### Remove ROIs with SNR < cutoff for average of all control trials #####
+############################################################################
+
+pixel_sn_data = r.pixel_sn_data
+SNRcutoff = r.SNRcutoff
+
+roi_averages = numpy.zeros((width,height))
+
+for roi_group_index in numpy.unique(cluster_results):
+  location_index = (cluster_results == roi_group_index)
+  sn_data_for_group = pixel_sn_data * location_index
+  average = sn_data_for_group[sn_data_for_group != 0].mean()
+  if average > SNRcutoff:
+    print(average)
+  roi_averages += (cluster_results == roi_group_index) * average
 
 
+roi_averages[roi_averages < SNRcutoff] = 0
+r.roi_averages = roi_averages[roi_averages > SNRcutoff]
+plt.matshow(roi_averages)
+plt.show()
+
+```
+``` {python}
+
+electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
+# print (electrode_data)
+electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
+# print (electrode_data)
+
+for i in range(0,width): #add electrode as new "roi"
+  for j in range(0,height):
+    if electrode_data[j][i] != 0:
+      cluster_results[j][i] = electrode_data[j][i]
+
+
+##################### Remove ROIs that are touching ########################
+############################################################################
+
+visited_cells = numpy.zeros((width,height))
+def check_collisions(x,y,group_index):
+  cell_value = cluster_results[y][x]
+  if cell_value != 0 and visited_cells[y][x] == 0:
+    visited_cells[y][x] = True
+    if group_index == 0 or cell_value==group_index:
+      xleft = max(0, x-1)
+      xright = min(width-1, x+1)
+      yup = max(0, y-1)
+      ydown = min(height-1, y+1)
+      check_collisions(x,yup,cell_value)
+      check_collisions(xleft,yup,cell_value)
+      check_collisions(xleft,y,cell_value)
+      check_collisions(xleft,ydown,cell_value)
+      check_collisions(x,ydown,cell_value)
+      check_collisions(xright,ydown,cell_value)
+      check_collisions(xright,y,cell_value)
+      check_collisions(xright,yup,cell_value)
+    else:
+      print ("Found collision",group_index,cell_value)
+      cluster_results[cluster_results == group_index] = 0
+      cluster_results[cluster_results == cell_value] = 0
+
+for i in range(0,width):
+  for j in range(0,height):
+    result = check_collisions(i,j,0)
+
+plt.matshow(cluster_results)
+plt.show()
+
+################ Separate remaining ROIs based on cluster ##################
+############################################################################
+
+pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
+
+plt.matshow(pixel_cluster_data)
+plt.show()
+
+```
 
 
 
