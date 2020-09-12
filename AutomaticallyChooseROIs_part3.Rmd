@@ -222,9 +222,50 @@ plt.show()
 
 ```
 
+```{python}
+pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 
+plt.matshow(pixel_cluster_data)
+plt.show()
+```
+```{python}
+visited_cells = numpy.zeros((width,height))
+def check_collisions(x,y,group_index):
+  cell_value = cluster_results[y][x]
+  if cell_value != 0 and visited_cells[y][x] == 0:
+    visited_cells[y][x] = True
+    if group_index == 0 or cell_value==group_index:
+      xleft = max(0, x-1)
+      xright = min(width-1, x+1)
+      yup = max(0, y-1)
+      ydown = min(height-1, y+1)
+      check_collisions(x,yup,cell_value)
+      check_collisions(xleft,yup,cell_value)
+      check_collisions(xleft,y,cell_value)
+      check_collisions(xleft,ydown,cell_value)
+      check_collisions(x,ydown,cell_value)
+      check_collisions(xright,ydown,cell_value)
+      check_collisions(xright,y,cell_value)
+      check_collisions(xright,yup,cell_value)
+    else:
+      print ("Found collision",group_index,cell_value)
+      cluster_results[cluster_results == group_index] = 0
+      cluster_results[cluster_results == cell_value] = 0
 
+for i in range(0,width):
+  for j in range(0,height):
+    result = check_collisions(i,j,0)
 
+plt.matshow(cluster_results)
+plt.show()
+
+```
+```{python}
+pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
+
+plt.matshow(pixel_cluster_data)
+plt.show()
+```
 
 
 
