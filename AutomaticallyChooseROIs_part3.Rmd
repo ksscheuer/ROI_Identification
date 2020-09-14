@@ -2,15 +2,16 @@
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
 knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
 ```
 
-```{r}
+```{r fig.width=10, fig.height=10}
 
 ########################## Set initial values###############################
 ############################################################################
 
 k <- 3 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 4
+SNRcutoff <- 5
 ROI_diameter_cutoff <- 3
 
 myslice <- "04-01"
@@ -102,7 +103,7 @@ if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
 ############################################################################
 
 ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
-  geom_tile(aes(fill=myfiles_df_cl$Cluster)) +
+  geom_tile(aes(fill=myfiles_df_cl$Cluster),color="gray") +
   labs(title=paste(dateSlice,"Clusters"), fill="SNR Avg +/- SD") +
   theme(
     axis.title.y = element_blank(),
@@ -150,6 +151,12 @@ for (i in 1:nrow(electrodepixels)) {
   myfiles_df_cl_with_electrode$Electrode[which(myfiles_df_cl_with_electrode$PixelID==electrodepixels[i,1])] <- 1
 }
 electrode_data <- t(matrix(myfiles_df_cl_with_electrode$Electrode, ncol=width, nrow=height))
+
+electrode_tip_x <- max(myfiles_df_cl_with_electrode$X[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_y_min <- min(myfiles_df_cl_with_electrode$Y[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_y_max <- max(myfiles_df_cl_with_electrode$Y[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_tip_y <- (electrode_y_min + electrode_y_max) / 2
+
 ```
 
 
@@ -161,7 +168,7 @@ electrode_data <- t(matrix(myfiles_df_cl_with_electrode$Electrode, ncol=width, n
 import numpy
 import matplotlib.pyplot as plt
 import pandas
-pixel_cluster_data = r.pixel_cluster_data
+pixel_cluster_data = r.pixel_cluster_data #cluster colors
 width = len(pixel_cluster_data)
 height = len(pixel_cluster_data[0])
 
@@ -182,41 +189,70 @@ def combine_bound(bound1, bound2):
 
 def check_cell(x, y, group_index, color):
   cell_value = pixel_cluster_data[y][x]
+  print ("x is",x,", y is",y,", group_index is",group_index,", color is",color)
+  print ("cell_value is",cell_value)
+  print ("cluster_results[y][x] is",cluster_results[y][x])
+  # print ("cell_value != 0 is ",cell_value != 0)
+  # print ("cluster_results[y][x] == 0 is ",cluster_results[y][x] == 0)
+  # print ("color == 0 or cell_value == color is ",(color == 0 or cell_value == color))
+  # print (cell_value != 0 and cluster_results[y][x] == 0 and (color == 0 or cell_value == color))
   if (cell_value != 0 and cluster_results[y][x] == 0 and (color == 0 or cell_value == color)):
     cluster_results[y][x] = group_index
+    # print (cluster_results[y][x])
     my_bound = [x,x,y,y]
     xleft = max(0, x-1)
     xright = min(width-1, x+1)
     yup = max(0, y-1)
     ydown = min(height-1, y+1)
+    # print (my_bound)
+    # print (xleft,xright,yup,ydown)
     child_bound = check_cell(x,yup,group_index,cell_value)
+    # print ("child_bound input values are",x,yup,group_index,cell_value)
+    # print ("child_bound is",child_bound)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(x,ydown,group_index,cell_value)
+    # print ("child_bound input values are",x,yup,group_index,cell_value)
+    # print ("child_bound is",child_bound)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xleft,y,group_index,cell_value)
+    # print ("child_bound input values are",x,yup,group_index,cell_value)
+    # print ("child_bound is",child_bound)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xright,y,group_index,cell_value)
+    # print ("child_bound input values are",x,yup,group_index,cell_value)
+    # print ("child_bound is",child_bound)
     my_bound = combine_bound(my_bound,child_bound)
+    print ("my_bound is",my_bound)
     return my_bound
   else:
     return None
-  
-group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
-group_bound = []
-  
-for i in range(0,width):
-  for j in range(0,height):
-    result = check_cell(i, j, group_index, 0)
-    if result is not None:
-      group_index += 1
-      group_bound.append(result)
 
-#print (group_bound)
-#print (len(group_bound))
-plt.matshow(cluster_results)
-plt.show()
-r.cluster_results = cluster_results    
+# group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
+# group_bound = []
+
+# print (pixel_cluster_data)
+# plt.matshow(pixel_cluster_data)
+# plt.show()
+
+check_cell(25,64,group_index,0)
+
+# for i in range(0,width):
+# for i in range(0,10):
+  # for j in range(0,height):
+# i = 0
+# for j in range(0,18):
+#   result = check_cell(i, j, group_index, 0)
+#   if result is not None:
+#     group_index += 1
+#     group_bound.append(result)
+# 
+# #print (group_bound)
+# #print (len(group_bound))
+# plt.matshow(cluster_results)
+# plt.show()
+# r.cluster_results = cluster_results
 ```
+
 ```{python}
 
 ############# Remove ROIs with diameter greater than cutoff ################
@@ -239,7 +275,6 @@ plt.show()
 
 
 ```
-
 ```{python}
 
 ################ Separate remaining ROIs based on cluster ##################
@@ -250,10 +285,51 @@ pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 plt.matshow(pixel_cluster_data)
 plt.show()
 ```
+
+```{python}
+############################ Add electrode #################################
+############################################################################
+
+electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
+# print (electrode_data)
+
+electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
+# print (electrode_data)
+
+plt.matshow(cluster_results)
+plt.show()
+print (numpy.unique(cluster_results))
+
+plt.matshow(pixel_cluster_data)
+plt.show()
+print (numpy.unique(pixel_cluster_data))
+
+print ((max(numpy.unique(pixel_cluster_data)))+1)
+print (max(numpy.unique(pixel_cluster_data))+1)
+electrode_cluster = max(numpy.unique(pixel_cluster_data))+1
+
+for i in range(0,width): #add electrode as new "roi"
+  for j in range(0,height):
+    if electrode_data[j][i] != 0:
+      cluster_results[j][i] = electrode_data[j][i]
+      pixel_cluster_data[j][i] = electrode_cluster
+
+plt.matshow(cluster_results)
+plt.show()
+print (numpy.unique(cluster_results))
+
+plt.matshow(pixel_cluster_data)
+plt.show()
+print (numpy.unique(pixel_cluster_data))
+```
+
 ```{python}
 
 ##################### Remove ROIs that are touching ########################
 ############################################################################
+
+plt.matshow(cluster_results)
+plt.show()
 
 visited_cells = numpy.zeros((width,height))
 def check_collisions(x,y,group_index):
@@ -286,6 +362,7 @@ plt.matshow(cluster_results)
 plt.show()
 
 ```
+
 ```{python}
 
 ################ Separate remaining ROIs based on cluster ##################
@@ -296,6 +373,7 @@ pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 plt.matshow(pixel_cluster_data)
 plt.show()
 ```
+
 ```{python}
 
 ###### Remove ROIs with SNR < cutoff for average of all control trials #####
@@ -321,62 +399,44 @@ plt.matshow(roi_averages)
 plt.show()
 
 ```
+
 ``` {python}
+
+################ Separate remaining ROIs based on cluster ##################
+############################################################################
+
+roi_averages = roi_averages * (cluster_results > 0)
+
+plt.matshow(roi_averages)
+plt.show()
+
+```
+
+``` {python}
+
+############################ Add electrode #################################
+############################################################################
 
 electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
 # print (electrode_data)
 electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
 # print (electrode_data)
 
-for i in range(0,width): #add electrode as new "roi"
-  for j in range(0,height):
-    if electrode_data[j][i] != 0:
-      cluster_results[j][i] = electrode_data[j][i]
-
-
-##################### Remove ROIs that are touching ########################
-############################################################################
-
-visited_cells = numpy.zeros((width,height))
-def check_collisions(x,y,group_index):
-  cell_value = cluster_results[y][x]
-  if cell_value != 0 and visited_cells[y][x] == 0:
-    visited_cells[y][x] = True
-    if group_index == 0 or cell_value==group_index:
-      xleft = max(0, x-1)
-      xright = min(width-1, x+1)
-      yup = max(0, y-1)
-      ydown = min(height-1, y+1)
-      check_collisions(x,yup,cell_value)
-      check_collisions(xleft,yup,cell_value)
-      check_collisions(xleft,y,cell_value)
-      check_collisions(xleft,ydown,cell_value)
-      check_collisions(x,ydown,cell_value)
-      check_collisions(xright,ydown,cell_value)
-      check_collisions(xright,y,cell_value)
-      check_collisions(xright,yup,cell_value)
-    else:
-      print ("Found collision",group_index,cell_value)
-      cluster_results[cluster_results == group_index] = 0
-      cluster_results[cluster_results == cell_value] = 0
-
-for i in range(0,width):
-  for j in range(0,height):
-    result = check_collisions(i,j,0)
-
-plt.matshow(cluster_results)
+plt.matshow(roi_averages)
 plt.show()
 
-################ Separate remaining ROIs based on cluster ##################
-############################################################################
+for i in range(0,width): #add electrode as new "cluster"
+  for j in range(0,height):
+    if electrode_data[j][i] != 0 and roi_averages[j][i] == 0:
+      # roi_averages[j][i] = (max(numpy.unique(roi_averages))+1)
+      roi_averages[j][i] = 10
 
-pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
+print (numpy.unique(roi_averages))
 
-plt.matshow(pixel_cluster_data)
+plt.matshow(roi_averages)
 plt.show()
 
 ```
-
 
 
 
