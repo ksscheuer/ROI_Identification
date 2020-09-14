@@ -2,7 +2,9 @@
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
 ```
 
 ```{r fig.width=10, fig.height=10}
@@ -11,10 +13,10 @@ knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020
 ############################################################################
 
 k <- 3 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 5
+SNRcutoff <- 3
 ROI_diameter_cutoff <- 3
 
-myslice <- "04-01"
+myslice <- "03-01"
 mydate <- "07-11-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
@@ -144,6 +146,7 @@ if (saveclusterplot==1) {
 height = 80
 width = 80
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
+# pixel_cluster_data <- matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height)
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
 pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
 myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
@@ -169,9 +172,12 @@ electrode_tip_y <- (electrode_y_min + electrode_y_max) / 2
 import numpy
 import matplotlib.pyplot as plt
 import pandas
-pixel_cluster_data = r.pixel_cluster_data #cluster colors
+pixel_cluster_data = r.pixel_cluster_data
 width = len(pixel_cluster_data)
 height = len(pixel_cluster_data[0])
+
+plt.matshow(pixel_cluster_data)
+plt.show()
 
 cluster_results = numpy.zeros((width,height))
 
@@ -197,25 +203,22 @@ def check_cell(x, y, group_index, color):
     xright = min(width-1, x+1)
     yup = max(0, y-1)
     ydown = min(height-1, y+1)
-    child_bound = check_cell(x,yup,group_index,cell_value)
-    my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(x,ydown,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-    child_bound = check_cell(xleft,y,group_index,cell_value)
+    child_bound = check_cell(x,yup,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xright,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-    print ("my_bound is",my_bound)
+    child_bound = check_cell(xleft,y,group_index,cell_value)
+    my_bound = combine_bound(my_bound,child_bound)
     return my_bound
   else:
     return None
-
+  
 group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
 group_bound = []
-
-# print (pixel_cluster_data)
-# plt.matshow(pixel_cluster_data)
-# plt.show()
+  
+# check_cell(0,53,group_index,0)  
 
 for i in range(0,width):
   for j in range(0,height):
@@ -228,7 +231,7 @@ for i in range(0,width):
 #print (len(group_bound))
 plt.matshow(cluster_results)
 plt.show()
-r.cluster_results = cluster_results
+r.cluster_results = cluster_results   
 ```
 
 ```{python}
@@ -263,6 +266,7 @@ pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 plt.matshow(pixel_cluster_data)
 plt.show()
 ```
+
 ```{python}
 ############################ Add electrode #################################
 ############################################################################
@@ -345,18 +349,50 @@ SNRcutoff = r.SNRcutoff
 
 roi_averages = numpy.zeros((width,height))
 
+# print (len(numpy.unique(cluster_results)))
+# 
+# # for roi_group_index in numpy.unique(cluster_results):
+# roi_group_index = numpy.unique(cluster_results)[0]
+# print (roi_group_index)
+# location_index = (cluster_results == roi_group_index)
+# print (location_index)
+# sn_data_for_group = pixel_sn_data * location_index
+# print (sn_data_for_group)
+# average = sn_data_for_group[sn_data_for_group != 0].mean()
+# print (average)
+# if average > SNRcutoff:
+#   print (average)
+#   # roi_averages += (cluster_results == roi_group_index) * average
+# else:
+#   print ("Below SNR threshold.")
+# roi_averages += (cluster_results == roi_group_index) * average
+# print (roi_averages)
+
+# roi_averages[roi_averages < SNRcutoff] = 0
+# r.roi_averages = roi_averages[roi_averages > SNRcutoff]
+# plt.matshow(roi_averages)
+# plt.show()
+
+
+
+
+
 for roi_group_index in numpy.unique(cluster_results):
   location_index = (cluster_results == roi_group_index)
   sn_data_for_group = pixel_sn_data * location_index
   average = sn_data_for_group[sn_data_for_group != 0].mean()
-  # if average > SNRcutoff:
-  #   print(average)
+  if average > SNRcutoff:
+    print (average)
+  else:
+    print ("Below SNR threshold.")
   roi_averages += (cluster_results == roi_group_index) * average
 
 roi_averages[roi_averages < SNRcutoff] = 0
 r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 plt.matshow(roi_averages)
 plt.show()
+
+print (roi_averages)
 
 ```
 
