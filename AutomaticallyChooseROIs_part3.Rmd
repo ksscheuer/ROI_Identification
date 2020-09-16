@@ -2,9 +2,9 @@
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
-# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
 ```
 
 ```{r fig.width=10, fig.height=10}
@@ -19,6 +19,8 @@ ROI_diameter_cutoff <- 3
 myslice <- "03-01"
 mydate <- "07-11-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
+height = 80
+width = 80
 
 ## note that plots are saved in same location as this file, not working directory
 saveclusterplot <- 1 #1 = save, 0 = don't save
@@ -143,11 +145,10 @@ if (saveclusterplot==1) {
 
 ############ Convert data to height x width representation #################
 ############################################################################
-height = 80
-width = 80
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
 # pixel_cluster_data <- matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height)
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
+pixel_cluster_data <- pixel_cluster_data[(height:1),]
 pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
 myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
 for (i in 1:nrow(electrodepixels)) {
