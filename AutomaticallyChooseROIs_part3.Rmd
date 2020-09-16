@@ -2,12 +2,12 @@
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
-# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
 ```
 
-```{r fig.width=10, fig.height=10}
+```{r fig.width=8, fig.height=8}
 
 ########################## Set initial values###############################
 ############################################################################
@@ -102,7 +102,6 @@ if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
   clustercutoff <- 0
 }
 
-
 ######################### Plot clusters ####################################
 ############################################################################
 
@@ -146,7 +145,6 @@ if (saveclusterplot==1) {
 ############ Convert data to height x width representation #################
 ############################################################################
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
-# pixel_cluster_data <- matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height)
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
 pixel_cluster_data <- pixel_cluster_data[(height:1),]
 pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
@@ -197,29 +195,38 @@ def combine_bound(bound1, bound2):
 
 def check_cell(x, y, group_index, color):
   cell_value = pixel_cluster_data[y][x]
+  # print ("cell value is",cell_value)
   if (cell_value != 0 and cluster_results[y][x] == 0 and (color == 0 or cell_value == color)):
     cluster_results[y][x] = group_index
+    # print ("group_index is",group_index)
     my_bound = [x,x,y,y]
-    xleft = max(0, x-1)
-    xright = min(width-1, x+1)
-    yup = max(0, y-1)
-    ydown = min(height-1, y+1)
-    child_bound = check_cell(x,ydown,group_index,cell_value)
-    my_bound = combine_bound(my_bound,child_bound)
+    xleft = max(0, x-1) #x coordinate of pixel to L
+    xright = min(width-1, x+1) #x coordinate of pixel to R
+    yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
+    ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
+    # print ("cluster_results[y][x] is",cluster_results[y][x],"my_bound is",my_bound)
+    # print ("xleft = ",xleft,"xright = ",xright,"yup = ",yup,"ydown = ",ydown)
+    # print ("yup")
     child_bound = check_cell(x,yup,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
+    # print ("ydown")
+    child_bound = check_cell(x,ydown,group_index,cell_value)
+    my_bound = combine_bound(my_bound,child_bound)
+    # print ("xleft")
     child_bound = check_cell(xright,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xleft,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
+    # print ("xright")
+    # print ("my_bound is now",my_bound)
     return my_bound
   else:
     return None
-  
+
 group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
 group_bound = []
-  
-# check_cell(0,53,group_index,0)  
+
+# check_cell(0,26,group_index,0)
 
 for i in range(0,width):
   for j in range(0,height):
@@ -230,9 +237,11 @@ for i in range(0,width):
 
 #print (group_bound)
 #print (len(group_bound))
+plt.matshow(cluster_results,vmin=0,vmax=19) #if dec vmax then better see some clusters
+plt.show()
 plt.matshow(cluster_results)
 plt.show()
-r.cluster_results = cluster_results   
+r.cluster_results = cluster_results
 ```
 
 ```{python}
