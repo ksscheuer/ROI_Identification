@@ -3,8 +3,8 @@
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
-# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
 ```
 
 ```{r fig.width=8, fig.height=8}
@@ -13,7 +13,7 @@ knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020
 ############################################################################
 
 k <- 3 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 3
+SNRcutoff <- 5
 ROI_diameter_cutoff <- 3
 
 myslice <- "03-01"
@@ -212,12 +212,13 @@ def check_cell(x, y, group_index, color):
     # print ("ydown")
     child_bound = check_cell(x,ydown,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-    # print ("xleft")
+    # print ("xright")
     child_bound = check_cell(xright,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
+    # print ("xleft")
     child_bound = check_cell(xleft,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-    # print ("xright")
+
     # print ("my_bound is now",my_bound)
     return my_bound
   else:
@@ -226,7 +227,26 @@ def check_cell(x, y, group_index, color):
 group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
 group_bound = []
 
-# check_cell(0,26,group_index,0)
+
+# check_cell(0,29,group_index,0)
+# x = 0
+# y = 29
+# color = 0
+# cell_value = pixel_cluster_data[y][x]
+# print ("cell_value", cell_value)
+# print ("cell_value != 0",cell_value != 0)
+# print ("cluster_results[y][x] == 0",cluster_results[y][x] == 0)
+# print ("color == 0 or cell_value == color",color == 0 or cell_value == color)
+# cluster_results[y][x] = group_index
+# print ("group_index",group_index)
+# my_bound = [x,x,y,y]
+# xleft = max(0, x-1) #x coordinate of pixel to L
+# xright = min(width-1, x+1) #x coordinate of pixel to R
+# yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
+# ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
+# print ("cluster_results[y][x] is",cluster_results[y][x],"my_bound is",my_bound)
+# print ("xleft = ",xleft,"xright = ",xright,"yup = ",yup,"ydown = ",ydown)
+
 
 for i in range(0,width):
   for j in range(0,height):
@@ -308,8 +328,8 @@ plt.show()
 ##################### Remove ROIs that are touching ########################
 ############################################################################
 
-plt.matshow(cluster_results)
-plt.show()
+# plt.matshow(cluster_results)
+# plt.show()
 
 plt.matshow(pixel_cluster_data)
 plt.show()
@@ -337,10 +357,24 @@ def check_collisions(x,y,group_index):
       cluster_results[cluster_results == group_index] = 0
       cluster_results[cluster_results == cell_value] = 0
 
+
+# check_collisions(4,2,group_index)
+# x = 4
+# y = 77
+# cell_value = cluster_results[y][x]
+# print ("cell_value",cell_value)
+# print ("visited_cells[y][x]==0",visited_cells[y][x]==0)
+# visited_cells[y][x] = True
+# print ("visited_cells[y][x]",visited_cells[y][x])
+
+
+
 for i in range(0,width):
   for j in range(0,height):
     result = check_collisions(i,j,0)
 
+plt.matshow(cluster_results,vmin=0,vmax=19)
+plt.show()
 plt.matshow(cluster_results)
 plt.show()
 
@@ -421,6 +455,35 @@ for i in range(0,width): #add electrode as new "roi"
 
 plt.matshow(roi_averages)
 plt.show()
+
+print (numpy.unique(roi_averages))
+
+# roi_average = [4.69941,5.0156]
+roi_average = [numpy.unique(roi_averages)]
+print (roi_average)
+# test = numpy.where(roi_averages == 4.69941)
+# test = list(zip(*numpy.where(roi_averages == roi_average)))
+# test = [list(zip(*numpy.where(roi_averages == 4.69941))),list(zip(*numpy.where(roi_averages == 5.0156)))]
+# test2 = list(test)
+# print (test)
+# test2 = [test,roi_average]
+print(test2)
+
+# print ([test])
+```
+``` {R}
+test2 <- unlist(py$test2)
+xycoords <- test2[-(length(test2))]
+roi_average <- test2[length(test2)]
+xcoords <- xycoords[seq(1,length(xycoords),2)]
+ycoords <- xycoords[seq(2,length(xycoords),2)]
+final_rois <- data.frame(matrix(ncol=5,nrow=length(xcoords)))
+colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
+final_rois$X <- as.data.frame(xcoords)
+final_rois$Y <- ycoords
+final_rois$SNR <- roi_average
+
+
 
 ```
 
