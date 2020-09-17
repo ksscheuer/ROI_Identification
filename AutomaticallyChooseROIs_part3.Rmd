@@ -444,44 +444,135 @@ print (roi_averages)
 ######################### Replot electrode #################################
 ############################################################################
 
-plt.matshow(roi_averages)
-plt.show()
+# plt.matshow(roi_averages)
+# plt.show()
+# 
+# for i in range(0,width): #add electrode as new "roi"
+#   for j in range(0,height):
+#     if electrode_data[j][i] != 0:
+#       # cluster_results[j][i] = electrode_data[j][i]
+#       roi_averages[j][i] = electrode_cluster
+# 
+# plt.matshow(roi_averages)
+# plt.show()
 
-for i in range(0,width): #add electrode as new "roi"
-  for j in range(0,height):
-    if electrode_data[j][i] != 0:
-      # cluster_results[j][i] = electrode_data[j][i]
-      roi_averages[j][i] = electrode_cluster
-
-plt.matshow(roi_averages)
-plt.show()
-
-print (numpy.unique(roi_averages))
+# print (numpy.unique(roi_averages))
 
 # roi_average = [4.69941,5.0156]
-roi_average = [numpy.unique(roi_averages)]
-print (roi_average)
+unique_SNR = numpy.unique(roi_averages)
+unique_SNR = numpy.delete(test,0)
+# print (unique_SNR)
+
+pixel_coords_for_all_rois = []
+total_pixels_in_all_rois = 0
+for roi in range(0,len(unique_SNR)):
+  # roi = 2
+  # print (roi)
+  pixel_coords_for_roi = list(zip(*numpy.where(roi_averages == unique_SNR[roi])))
+  # print (len(pixel_coords_for_roi))
+  # print (pixel_coords_for_roi)
+  # print (len(pixel_coords_for_roi))
+  total_pixels_in_all_rois += len(pixel_coords_for_roi)
+  pixel_coords_to_import = []
+  for coord_pair in pixel_coords_for_roi:
+    pixel_coords_to_import.extend([coord_pair,unique_SNR[roi]])
+  # print (pixel_coords_to_import)
+  pixel_coords_for_all_rois.extend([pixel_coords_to_import])
+  # print (pixel_coords_for_all_rois)
+  # print (len(pixel_coords_for_all_rois))
+  # pixel_coords_for_all_rois.extend([pixel_coords_for_roi,unique_SNR[roi]])
+  # pixel_coords_for_all_rois.extend([pixel_coords_for_roi])
+  # pixel_coords_for_all_rois.extend([pixel_coords_for_roi,[unique_SNR[roi]]*len(pixel_coords_for_roi)])
+#   print (pixel_coords_for_all_rois)
+# print (pixel_coords_for_all_rois)
+# print (unique_SNR)
+print (total_pixels_in_all_rois)
+
+
+
 # test = numpy.where(roi_averages == 4.69941)
 # test = list(zip(*numpy.where(roi_averages == roi_average)))
 # test = [list(zip(*numpy.where(roi_averages == 4.69941))),list(zip(*numpy.where(roi_averages == 5.0156)))]
 # test2 = list(test)
 # print (test)
 # test2 = [test,roi_average]
-print(test2)
+# print(test2)
 
 # print ([test])
+### do something with list.append() here?
 ```
 ``` {R}
-test2 <- unlist(py$test2)
-xycoords <- test2[-(length(test2))]
-roi_average <- test2[length(test2)]
-xcoords <- xycoords[seq(1,length(xycoords),2)]
-ycoords <- xycoords[seq(2,length(xycoords),2)]
-final_rois <- data.frame(matrix(ncol=5,nrow=length(xcoords)))
+# test2 <- unlist(py$test2)
+# pixel_coords_for_all_rois <- py$pixel_coords_for_all_rois
+pixel_coords_for_all_rois <- py$pixel_coords_for_all_rois
+total_pixels_in_all_rois <- py$total_pixels_in_all_rois
+# test
+# unlist(test)
+final_rois_from_python <- matrix(unlist(pixel_coords_for_all_rois),nrow = total_pixels_in_all_rois,byrow=TRUE)
+final_rois <- data.frame(matrix(ncol=5,nrow=nrow(final_rois_from_python)))
 colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
-final_rois$X <- as.data.frame(xcoords)
-final_rois$Y <- ycoords
-final_rois$SNR <- roi_average
+final_rois$X <- final_rois_from_python[,1]
+final_rois$Y <- final_rois_from_python[,2]
+final_rois$SNR <- final_rois_from_python[,3]
+
+for (i in 1:nrow(final_rois)) {
+  all_x <- which(myfiles_df_cl$X==final_rois$X[i])
+  all_y <- which(myfiles_df_cl$Y==final_rois$Y[i])
+  final_rois$Pixel_ID[i] <- intersect(all_x,all_y)
+}
+
+roi_index <- 0
+for (i in 1:length(unique(final_rois$SNR))) {
+  final_rois$ROI_ID[which(final_rois$SNR==unique(final_rois$SNR)[i])] <- roi_index
+  roi_index <- roi_index + 1
+}
+
+nROIs <- max(final_rois$ROI_ID)+1
+dat_file <- data.frame(matrix(ncol=1,nrow=3*nROIs+1+nrow(final_rois)))
+colnames(dat_file) <- NULL
+dat_file[1,1] <- nROIs
+row_id <- 2
+for (i in 0:max(final_rois$ROI_ID)) {
+  dat_file[c(row_id,(row_id+2)),1] <- i
+  dat_file[(row_id+1),1] <- length(which(final_rois$ROI_ID==i))+1
+  dat_file[c((row_id+3):(row_id+3+length(which(final_rois$ROI_ID==i))-1)),1] <- final_rois$Pixel_ID[which(final_rois$ROI_ID==i)] 
+  row_id <- row_id+2+length(which(final_rois$ROI_ID==i))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# np <- import("numpy", convert=FALSE)
+# (x <- np$reshape(np$arange(1, 25), c(4L, 3L, 2L)))
+# (x <- np$reshape(np$arange(pixel_coords_for_all_rois), c(4L, 3L, 2L)))
+
+
+# test <- py_to_r(pixel_coords_for_all_rois)
+
+# xycoords <- test2[-(length(test2))]
+# roi_average <- test2[length(test2)]
+# xcoords <- xycoords[seq(1,length(xycoords),2)]
+# ycoords <- xycoords[seq(2,length(xycoords),2)]
+# final_rois <- data.frame(matrix(ncol=5,nrow=length(xcoords)))
+# colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
+# final_rois$X <- as.data.frame(xcoords)
+# final_rois$Y <- ycoords
+# final_rois$SNR <- roi_average
 
 
 
