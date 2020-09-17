@@ -5,6 +5,8 @@ knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
 knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
+
+# reticulate::repl_python() #to run python in r console
 ```
 
 ```{r fig.width=8, fig.height=8}
@@ -13,7 +15,7 @@ knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020
 ############################################################################
 
 k <- 3 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 5
+SNRcutoff <- 5.5
 ROI_diameter_cutoff <- 3
 
 myslice <- "03-01"
@@ -118,7 +120,7 @@ ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
     legend.position = "none"
   ) +
   guides(fill = guide_legend(keyheight = 0.9)) +
-  scale_y_reverse() +
+  # scale_y_reverse() +
   scale_fill_gradientn(breaks=seq(1:k),
                        labels=c(paste(round(clusteraverages_all$Avg,3),"+/-",round(clusteraverages_all$SD,3))),
                        colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
@@ -146,7 +148,7 @@ if (saveclusterplot==1) {
 ############################################################################
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
-pixel_cluster_data <- pixel_cluster_data[(height:1),]
+# pixel_cluster_data <- pixel_cluster_data[(height:1),]
 pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
 myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
 for (i in 1:nrow(electrodepixels)) {
@@ -460,8 +462,10 @@ print (roi_averages)
 
 # roi_average = [4.69941,5.0156]
 unique_SNR = numpy.unique(roi_averages)
-unique_SNR = numpy.delete(test,0)
+unique_SNR = numpy.delete(unique_SNR,0)
 # print (unique_SNR)
+
+roi_averages = numpy.transpose(roi_averages)
 
 pixel_coords_for_all_rois = []
 total_pixels_in_all_rois = 0
@@ -484,9 +488,9 @@ for roi in range(0,len(unique_SNR)):
   # pixel_coords_for_all_rois.extend([pixel_coords_for_roi])
   # pixel_coords_for_all_rois.extend([pixel_coords_for_roi,[unique_SNR[roi]]*len(pixel_coords_for_roi)])
 #   print (pixel_coords_for_all_rois)
-# print (pixel_coords_for_all_rois)
+print (pixel_coords_for_all_rois)
 # print (unique_SNR)
-print (total_pixels_in_all_rois)
+# print (total_pixels_in_all_rois)
 
 
 
@@ -511,8 +515,8 @@ total_pixels_in_all_rois <- py$total_pixels_in_all_rois
 final_rois_from_python <- matrix(unlist(pixel_coords_for_all_rois),nrow = total_pixels_in_all_rois,byrow=TRUE)
 final_rois <- data.frame(matrix(ncol=5,nrow=nrow(final_rois_from_python)))
 colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
-final_rois$X <- final_rois_from_python[,1]
-final_rois$Y <- final_rois_from_python[,2]
+final_rois$X <- final_rois_from_python[,1]+1
+final_rois$Y <- 80-(final_rois_from_python[,2]+1)
 final_rois$SNR <- final_rois_from_python[,3]
 
 for (i in 1:nrow(final_rois)) {
@@ -535,12 +539,13 @@ row_id <- 2
 for (i in 0:max(final_rois$ROI_ID)) {
   dat_file[c(row_id,(row_id+2)),1] <- i
   dat_file[(row_id+1),1] <- length(which(final_rois$ROI_ID==i))+1
-  dat_file[c((row_id+3):(row_id+3+length(which(final_rois$ROI_ID==i))-1)),1] <- final_rois$Pixel_ID[which(final_rois$ROI_ID==i)] 
-  row_id <- row_id+2+length(which(final_rois$ROI_ID==i))
+  dat_file[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==i)))),1] <- final_rois$Pixel_ID[which(final_rois$ROI_ID==i)] 
+  row_id <- row_id+3+length(which(final_rois$ROI_ID==i))
 }
 
-
-
+write.table(dat_file,"final_rois.dat",
+              # paste(min(roiindexesinthisdatfile),"to",max(roiindexesinthisdatfile),".dat",sep=""),
+              row.names = FALSE)
 
 
 
