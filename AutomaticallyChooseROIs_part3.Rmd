@@ -2,8 +2,8 @@
 ```{r setup, include = FALSE}
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
-# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/03-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-12_ACC/06-01")
 
 # reticulate::repl_python() #to run python in r console
@@ -15,8 +15,9 @@ knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020
 ############################################################################
 
 k <- 3 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 5.5
+SNRcutoff <- 5
 ROI_diameter_cutoff <- 3
+upside_down <- 0 #1 if upside-down, 0 if not
 
 myslice <- "03-01"
 mydate <- "07-11-2020"
@@ -149,7 +150,13 @@ if (saveclusterplot==1) {
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
 # pixel_cluster_data <- pixel_cluster_data[(height:1),]
-pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
+
+if (upside_down==0) {
+  pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
+} else {
+  pixel_sn_data <- matrix(myfiles_df_cl$Avg, ncol=width, nrow=height)
+}
+
 myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
 for (i in 1:nrow(electrodepixels)) {
   myfiles_df_cl_with_electrode$Electrode[which(myfiles_df_cl_with_electrode$PixelID==electrodepixels[i,1])] <- 1
@@ -208,11 +215,14 @@ def check_cell(x, y, group_index, color):
     ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
     # print ("cluster_results[y][x] is",cluster_results[y][x],"my_bound is",my_bound)
     # print ("xleft = ",xleft,"xright = ",xright,"yup = ",yup,"ydown = ",ydown)
-    # print ("yup")
-    child_bound = check_cell(x,yup,group_index,cell_value)
-    my_bound = combine_bound(my_bound,child_bound)
+    # # print ("yup")
+    # child_bound = check_cell(x,yup,group_index,cell_value)
+    # my_bound = combine_bound(my_bound,child_bound)
     # print ("ydown")
     child_bound = check_cell(x,ydown,group_index,cell_value)
+    my_bound = combine_bound(my_bound,child_bound)
+    # print ("yup")
+    child_bound = check_cell(x,yup,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
     # print ("xright")
     child_bound = check_cell(xright,y,group_index,cell_value)
@@ -288,6 +298,7 @@ plt.show()
 
 
 ```
+
 ```{python}
 
 ################ Separate remaining ROIs based on cluster ##################
@@ -304,6 +315,16 @@ plt.show()
 ############################################################################
 
 electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
+plt.matshow(electrode_data)
+plt.show()
+
+inverse_electrode_data = electrode_data
+inverse_electrode_data = numpy.where(electrode_data==0, 1, inverse_electrode_data)
+inverse_electrode_data = numpy.where(electrode_data==1, 0, inverse_electrode_data)
+# inverse_electrode_data[electrode_data == 1] = 0
+# inverse_electrode_data[electrode_data == 0] = 1
+plt.matshow(inverse_electrode_data)
+plt.show()
 # print (electrode_data)
 
 electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
@@ -314,14 +335,63 @@ plt.show()
 
 electrode_cluster = max(numpy.unique(pixel_cluster_data))+1
 
+# print (cluster_results[35][0])
+
+pixel_cluster_data_with_electrode = pixel_cluster_data
+
 for i in range(0,width): #add electrode as new "roi"
   for j in range(0,height):
     if electrode_data[j][i] != 0:
       cluster_results[j][i] = electrode_data[j][i]
-      pixel_cluster_data[j][i] = electrode_cluster
+      pixel_cluster_data_with_electrode[j][i] = electrode_cluster
+
+# print (cluster_results[35][0])
 
 plt.matshow(pixel_cluster_data)
 plt.show()
+
+```
+
+``` {python}
+electrode_x_min = r.electrode_x_min-1
+electrode_x_max = r.electrode_tip_x-1
+electrode_y_max = (height-1)-(r.electrode_y_min-1)
+electrode_y_min = (height-1)-(r.electrode_y_max-1)
+print (electrode_x_min,electrode_x_max,electrode_y_min,electrode_y_max)
+
+plt.matshow(cluster_results)
+plt.show()
+
+plt.matshow(pixel_cluster_data)
+plt.show()
+
+numpy.max(cluster_results)
+numpy.max(pixel_cluster_data)
+
+rois_touching_electrode = []
+for i in range(0,height):
+  for j in range(0,width):
+    cell_value = cluster_results[j][i]
+    if cell_value!=0 and i>(electrode_x_min-2) and i<(electrode_x_max+2) and j>(electrode_y_min-2) and j<(electrode_y_max+2):
+    # if cell_value!=0 and i>(electrode_x_min-1) and i<(electrode_x_max+1) and j>(electrode_y_min-1) and j<(electrode_y_max+1):
+      rois_touching_electrode.append(cell_value)
+
+rois_touching_electrode = numpy.unique(rois_touching_electrode)
+print (rois_touching_electrode)
+
+for i in range(0,width):
+  for j in range(0,height):
+    cell_value = cluster_results[j][i]
+    if cell_value in rois_touching_electrode:
+      cluster_results[j][i] = 0
+      pixel_cluster_data[j][i] = 0
+
+plt.matshow(cluster_results)
+plt.show()
+
+plt.matshow(pixel_cluster_data)
+plt.show()
+
 
 ```
 
@@ -330,18 +400,23 @@ plt.show()
 ##################### Remove ROIs that are touching ########################
 ############################################################################
 
-# plt.matshow(cluster_results)
-# plt.show()
+plt.matshow(cluster_results)
+plt.show()
 
 plt.matshow(pixel_cluster_data)
 plt.show()
 
+
 visited_cells = numpy.zeros((width,height))
 def check_collisions(x,y,group_index):
   cell_value = cluster_results[y][x]
+  print ("cell_value",cell_value)
+  # if cell_value != 0 and visited_cells[y][x] == 0 and cell_value!=max(numpy.unique(electrode_data)):
   if cell_value != 0 and visited_cells[y][x] == 0:
     visited_cells[y][x] = True
     if group_index == 0 or cell_value==group_index:
+    # if (group_index == 0 or cell_value==group_index) and cell_value!=max(numpy.unique(electrode_data)):
+    # if group_index == 0 or cell_value==group_index or cell_value==max(numpy.unique(electrode_data)):
       xleft = max(0, x-1)
       xright = min(width-1, x+1)
       yup = max(0, y-1)
@@ -360,17 +435,17 @@ def check_collisions(x,y,group_index):
       cluster_results[cluster_results == cell_value] = 0
 
 
-# check_collisions(4,2,group_index)
-# x = 4
-# y = 77
-# cell_value = cluster_results[y][x]
-# print ("cell_value",cell_value)
-# print ("visited_cells[y][x]==0",visited_cells[y][x]==0)
-# visited_cells[y][x] = True
-# print ("visited_cells[y][x]",visited_cells[y][x])
-
-
-
+# # check_collisions(4,2,group_index)
+# # x = 4
+# # y = 77
+# # cell_value = cluster_results[y][x]
+# # print ("cell_value",cell_value)
+# # print ("visited_cells[y][x]==0",visited_cells[y][x]==0)
+# # visited_cells[y][x] = True
+# # print ("visited_cells[y][x]",visited_cells[y][x])
+# 
+# 
+# 
 for i in range(0,width):
   for j in range(0,height):
     result = check_collisions(i,j,0)
@@ -446,17 +521,17 @@ print (roi_averages)
 ######################### Replot electrode #################################
 ############################################################################
 
-# plt.matshow(roi_averages)
-# plt.show()
-# 
-# for i in range(0,width): #add electrode as new "roi"
-#   for j in range(0,height):
-#     if electrode_data[j][i] != 0:
-#       # cluster_results[j][i] = electrode_data[j][i]
-#       roi_averages[j][i] = electrode_cluster
-# 
-# plt.matshow(roi_averages)
-# plt.show()
+plt.matshow(roi_averages)
+plt.show()
+
+for i in range(0,width): #add electrode as new "roi"
+  for j in range(0,height):
+    if electrode_data[j][i] != 0:
+      # cluster_results[j][i] = electrode_data[j][i]
+      roi_averages[j][i] = electrode_cluster
+
+plt.matshow(roi_averages)
+plt.show()
 
 # print (numpy.unique(roi_averages))
 
@@ -505,6 +580,7 @@ print (pixel_coords_for_all_rois)
 # print ([test])
 ### do something with list.append() here?
 ```
+
 ``` {R}
 # test2 <- unlist(py$test2)
 # pixel_coords_for_all_rois <- py$pixel_coords_for_all_rois
@@ -515,15 +591,19 @@ total_pixels_in_all_rois <- py$total_pixels_in_all_rois
 final_rois_from_python <- matrix(unlist(pixel_coords_for_all_rois),nrow = total_pixels_in_all_rois,byrow=TRUE)
 final_rois <- data.frame(matrix(ncol=5,nrow=nrow(final_rois_from_python)))
 colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
+# final_rois$X <- final_rois_from_python[,1]+1
+# final_rois$Y <- 80-(final_rois_from_python[,2]+1)
 final_rois$X <- final_rois_from_python[,1]+1
-final_rois$Y <- 80-(final_rois_from_python[,2]+1)
+final_rois$Y <- 80-(final_rois_from_python[,2])
 final_rois$SNR <- final_rois_from_python[,3]
+
 
 for (i in 1:nrow(final_rois)) {
   all_x <- which(myfiles_df_cl$X==final_rois$X[i])
   all_y <- which(myfiles_df_cl$Y==final_rois$Y[i])
   final_rois$Pixel_ID[i] <- intersect(all_x,all_y)
 }
+
 
 roi_index <- 0
 for (i in 1:length(unique(final_rois$SNR))) {
@@ -539,7 +619,7 @@ row_id <- 2
 for (i in 0:max(final_rois$ROI_ID)) {
   dat_file[c(row_id,(row_id+2)),1] <- i
   dat_file[(row_id+1),1] <- length(which(final_rois$ROI_ID==i))+1
-  dat_file[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==i)))),1] <- final_rois$Pixel_ID[which(final_rois$ROI_ID==i)] 
+  dat_file[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==i)))),1] <- (final_rois$Pixel_ID[which(final_rois$ROI_ID==i)])-1 
   row_id <- row_id+3+length(which(final_rois$ROI_ID==i))
 }
 
