@@ -10,15 +10,14 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-06-01_SS/05-01")
 
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 SNRcutoff <- 4
 ROI_diameter_cutoff <- 3 # max number of pixels for diameter of ROI
 upside_down <- 0 # 1 if upside-down, 0 if not
-
-myslice <- "02-01"
-mydate <- "07-11-2020"
+myslice <- "05-01"
+mydate <- "06-01-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
@@ -86,6 +85,7 @@ for (i in 1:k) {
 }
 
 if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
+  print("No clusters with average SNR > SNR cutoff")
   clustercutoff <- (which(clusteraverages$StN_Avg>SNRcutoff))-1
 } else {
   clustercutoff <- 0
@@ -186,15 +186,18 @@ def check_cell(x, y, group_index, color):
     xright = min(width-1, x+1) #x coordinate of pixel to R
     yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
     ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
-    # child_bound = check_cell(xleft,y,group_index,cell_value)
+    # child_bound = check_cell(xright,y,group_index,cell_value)
     # my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xright,y,group_index,cell_value)
+    my_bound = combine_bound(my_bound,child_bound)
+    child_bound = check_cell(xleft,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(x,yup,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(x,ydown,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-
+    # child_bound = check_cell(x,yup,group_index,cell_value)
+    # my_bound = combine_bound(my_bound,child_bound)
     return my_bound
   else:
     return None
@@ -202,21 +205,67 @@ def check_cell(x, y, group_index, color):
 group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
 group_bound = []
 
+# check_cell(0,61,group_index,0)
+
+# x=0
+# y=28
+# color=0
+# cell_value = pixel_cluster_data[y][x]
+# print ("cell_value",cell_value)
+# cell_value != 0 and cluster_results[y][x] == 0 and (color == 0 or cell_value == color)
+# cluster_results[y][x] = group_index
+# my_bound = [x,x,y,y]
+# xleft = max(0, x-1) #x coordinate of pixel to L
+# xright = min(width-1, x+1) #x coordinate of pixel to R
+# yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
+# ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
+# print (xleft,xright,yup,ydown)
+# 
+# check_cell(xright,y,group_index,cell_value)
+# # print (child_bound)
+# cell_value = pixel_cluster_data[y][xright]
+# print ("cell_value xright",cell_value)
+# cell_value != 0 and cluster_results[y][xright] == 0 and (color == 0 or cell_value == color)
+# my_bound = combine_bound(my_bound,child_bound)
+# print (my_bound)
+
+# child_bound = check_cell(xleft,y,group_index,cell_value)
+# my_bound = combine_bound(my_bound,child_bound)
+# print (child_bound)
+# print (my_bound)
+# # cell_value = pixel_cluster_data[y][xleft]
+# # print ("cell_value xleft",cell_value)
+# # cell_value != 0 and cluster_results[y][xleft] == 0 and (color == 0 or cell_value == color)
+# # my_bound = combine_bound(my_bound,child_bound)
+# # print (my_bound)
+# child_bound = check_cell(x,ydown,group_index,cell_value)
+# cell_value = pixel_cluster_data[ydown][x]
+# print ("cell_value ydown",cell_value)
+# cell_value != 0 and cluster_results[ydown][x] == 0 and (color == 0 or cell_value == color)
+# my_bound = combine_bound(my_bound,child_bound)
+# print (my_bound)
+#     my_bound = combine_bound(my_bound,child_bound)
+#     child_bound = check_cell(xright,y,group_index,cell_value)
+#     my_bound = combine_bound(my_bound,child_bound)
+#     child_bound = check_cell(x,ydown,group_index,cell_value)
+#     my_bound = combine_bound(my_bound,child_bound)
+#     child_bound = check_cell(x,yup,group_index,cell_value)
+#     my_bound = combine_bound(my_bound,child_bound)
+#     return my_bound
+# # check_cell(0, 34, group_index, 0)
+
 for i in range(0,width):
   for j in range(0,height):
     result = check_cell(i, j, group_index, 0)
     if result is not None:
       group_index += 1
       group_bound.append(result)
-
 # to better see some clusters, decrease vmin and vmax
 plt.matshow(cluster_results,vmin=0,vmax=19)
 plt.show()
-
 plt.matshow(cluster_results)
 plt.show()
 plt.savefig("Step3_All_ROIs.jpg")
-
 r.cluster_results = cluster_results
 
 ```
@@ -240,8 +289,9 @@ for i in range(0,len(group_bound)):
 r.cluster_results = cluster_results
 
 # to see all ROIs, where each ROI is its own color
-# plt.matshow(cluster_results)
-# plt.show()
+# plt.matshow(cluster_results,vmin=0,vmax=19)
+plt.matshow(cluster_results)
+plt.show()
 
 ```
 
@@ -442,7 +492,7 @@ final_rois_from_python <- matrix(unlist(pixel_coords_for_all_rois),nrow = total_
 final_rois <- data.frame(matrix(ncol=5,nrow=nrow(final_rois_from_python)))
 colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
 final_rois$X <- final_rois_from_python[,1]+1
-final_rois$Y <- final_rois_from_python[,2]
+final_rois$Y <- final_rois_from_python[,2]+1
 final_rois$SNR <- final_rois_from_python[,3]
 
 
@@ -472,7 +522,8 @@ write.table(dat_file_electrode,"electrode.dat",row.names = FALSE)
 final_rois_no_electrode <- final_rois[-which(final_rois$ROI_ID==0),]
 datfilebreakpoints <- c(seq(1,nROIs-1,by=5),nROIs)
 for (i in 2:length(datfilebreakpoints)) {
-  if (!is.integer((nROIs-1)/5) & i==length(datfilebreakpoints)) {
+  if ((nROIs-1)%%5!=0 & i==length(datfilebreakpoints)) {
+  # if (!is.integer(((nROIs-1)/5)) & i==length(datfilebreakpoints)) {
     tracesinfile <- (nROIs-1)%%5 # remainder so that if number ROIs not divisible by 5, final dat file ends with final ROI
   } else {
     tracesinfile <- 5
@@ -494,7 +545,7 @@ for (i in 2:length(datfilebreakpoints)) {
     rowindex <- rowindex+3+length(pixelidsinthisroi)
   write.table(datfile,
             # paste(min(roiindexesinthisdatfile),"to",max(roiindexesinthisdatfile),".dat",sep=""),
-            paste(sprintf("%02d", min(roiindexesinthisdatfile)),"to",sprintf("%02d", max(roiindexesinthisdatfile)),".dat",sep=""),
+            paste("ROIs",sprintf("%02d", min(roiindexesinthisdatfile)),"to",sprintf("%02d", max(roiindexesinthisdatfile)),".dat",sep=""),
             row.names = FALSE)
   }
 }
