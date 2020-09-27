@@ -10,14 +10,14 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-06-01_SS/05-01")
-
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-09-17_BC/03-01_aka_03-01-01_to_03-01-06_SNR_Cutoff_8_vs_4")
+  
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 SNRcutoff <- 4
 ROI_diameter_cutoff <- 3 # max number of pixels for diameter of ROI
 upside_down <- 0 # 1 if upside-down, 0 if not
-myslice <- "05-01"
-mydate <- "06-01-2020"
+myslice <- "04-01"
+mydate <- "09-15-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
@@ -154,6 +154,9 @@ electrode_tip_y <- (electrode_y_min + electrode_y_max) / 2
 import numpy
 import matplotlib.pyplot as plt
 import pandas
+import scipy
+import collections
+from collections import Counter
 pixel_cluster_data = r.pixel_cluster_data
 width = len(pixel_cluster_data)
 height = len(pixel_cluster_data[0])
@@ -177,6 +180,14 @@ def combine_bound(bound1, bound2):
   ]
   return result
 
+### order apparently matters, eg 2020-09-10_FXR1_BC 04-01 doesn't work if xleft -> xright -> yup -> ydown
+### but does work if xleft -> xright -> ydown -> yup
+### worst option: manually change things to see if can get right combo
+### bad option: write some try/except thing to go through all permutations of directions and for each
+### permutation check if RecursionError and if so then try next permutation. Potential problem: maybe there
+### isn't a combo that works.
+### best option: figure out why order of directions matters
+
 def check_cell(x, y, group_index, color):
   cell_value = pixel_cluster_data[y][x]
   if (cell_value != 0 and cluster_results[y][x] == 0 and (color == 0 or cell_value == color)):
@@ -186,73 +197,20 @@ def check_cell(x, y, group_index, color):
     xright = min(width-1, x+1) #x coordinate of pixel to R
     yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
     ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
-    # child_bound = check_cell(xright,y,group_index,cell_value)
-    # my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xright,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(xleft,y,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-    child_bound = check_cell(x,yup,group_index,cell_value)
-    my_bound = combine_bound(my_bound,child_bound)
     child_bound = check_cell(x,ydown,group_index,cell_value)
     my_bound = combine_bound(my_bound,child_bound)
-    # child_bound = check_cell(x,yup,group_index,cell_value)
-    # my_bound = combine_bound(my_bound,child_bound)
+    child_bound = check_cell(x,yup,group_index,cell_value)
+    my_bound = combine_bound(my_bound,child_bound)
     return my_bound
   else:
     return None
 
 group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
 group_bound = []
-
-# check_cell(0,61,group_index,0)
-
-# x=0
-# y=28
-# color=0
-# cell_value = pixel_cluster_data[y][x]
-# print ("cell_value",cell_value)
-# cell_value != 0 and cluster_results[y][x] == 0 and (color == 0 or cell_value == color)
-# cluster_results[y][x] = group_index
-# my_bound = [x,x,y,y]
-# xleft = max(0, x-1) #x coordinate of pixel to L
-# xright = min(width-1, x+1) #x coordinate of pixel to R
-# yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
-# ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
-# print (xleft,xright,yup,ydown)
-# 
-# check_cell(xright,y,group_index,cell_value)
-# # print (child_bound)
-# cell_value = pixel_cluster_data[y][xright]
-# print ("cell_value xright",cell_value)
-# cell_value != 0 and cluster_results[y][xright] == 0 and (color == 0 or cell_value == color)
-# my_bound = combine_bound(my_bound,child_bound)
-# print (my_bound)
-
-# child_bound = check_cell(xleft,y,group_index,cell_value)
-# my_bound = combine_bound(my_bound,child_bound)
-# print (child_bound)
-# print (my_bound)
-# # cell_value = pixel_cluster_data[y][xleft]
-# # print ("cell_value xleft",cell_value)
-# # cell_value != 0 and cluster_results[y][xleft] == 0 and (color == 0 or cell_value == color)
-# # my_bound = combine_bound(my_bound,child_bound)
-# # print (my_bound)
-# child_bound = check_cell(x,ydown,group_index,cell_value)
-# cell_value = pixel_cluster_data[ydown][x]
-# print ("cell_value ydown",cell_value)
-# cell_value != 0 and cluster_results[ydown][x] == 0 and (color == 0 or cell_value == color)
-# my_bound = combine_bound(my_bound,child_bound)
-# print (my_bound)
-#     my_bound = combine_bound(my_bound,child_bound)
-#     child_bound = check_cell(xright,y,group_index,cell_value)
-#     my_bound = combine_bound(my_bound,child_bound)
-#     child_bound = check_cell(x,ydown,group_index,cell_value)
-#     my_bound = combine_bound(my_bound,child_bound)
-#     child_bound = check_cell(x,yup,group_index,cell_value)
-#     my_bound = combine_bound(my_bound,child_bound)
-#     return my_bound
-# # check_cell(0, 34, group_index, 0)
 
 for i in range(0,width):
   for j in range(0,height):
@@ -309,13 +267,13 @@ plt.savefig("Step4_Clustered_ROIs_Correct_Size.jpg")
 ```
 
 ```{python}
-############################ Add electrode #################################
-############################################################################
+############################ Add electrode #################
+############################################################
 
 electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
 # to see just electrode plotted
-# plt.matshow(electrode_data)
-# plt.show()
+plt.matshow(electrode_data)
+plt.show()
 
 electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
 
@@ -328,6 +286,8 @@ for i in range(0,width): #add electrode as new "roi"
     if electrode_data[j][i] != 0:
       cluster_results[j][i] = electrode_data[j][i]
       pixel_cluster_data_with_electrode[j][i] = electrode_cluster
+
+r.cluster_results = cluster_results
 
 plt.matshow(pixel_cluster_data)
 plt.show()
@@ -364,6 +324,8 @@ for i in range(0,width):
     if cell_value in rois_touching_electrode:
       cluster_results[j][i] = 0
       pixel_cluster_data[j][i] = 0
+
+r.cluster_results = cluster_results
 
 plt.matshow(pixel_cluster_data)
 plt.show()
@@ -404,10 +366,11 @@ for i in range(0,width):
   for j in range(0,height):
     result = check_collisions(i,j,0)
 
+r.cluster_results = cluster_results
+
 # to better see some clusters, decrease vmin and vmax
 # plt.matshow(cluster_results,vmin=0,vmax=19)
 # plt.show()
-
 plt.matshow(cluster_results)
 plt.show()
 plt.savefig("Step6b_ROIs_not_Touching.jpg")
@@ -434,7 +397,16 @@ for roi_group_index in numpy.unique(cluster_results):
     print ("Below SNR threshold.")
   roi_averages += (cluster_results == roi_group_index) * average
 
+r.roi_average = roi_averages
+
+unique, counts = numpy.unique(roi_averages, return_counts=True)
+snr_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
+background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most often ie background
+roi_averages[roi_averages == background_snr] = 0 #set background to 0
+r.roi_average = roi_averages
+
 roi_averages[roi_averages < SNRcutoff] = 0
+r.roi_average = roi_averages
 r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 
 plt.matshow(roi_averages)
