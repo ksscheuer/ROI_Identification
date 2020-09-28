@@ -10,14 +10,14 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-08-03_ACC/01-01_ToDo")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-05-29_SS_notUsable/01-01and01-02")
   
 k <- 2 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 4
+SNRcutoff <- 5
 ROI_diameter_cutoff <- 3 # max number of pixels for diameter of ROI
 upside_down <- 0 # 1 if upside-down, 0 if not
-myslice <- "04-01"
-mydate <- "09-15-2020"
+myslice <- "01"
+mydate <- "05-29-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
@@ -99,12 +99,13 @@ if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
 
 ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
   geom_tile(aes(fill=myfiles_df_cl$Cluster),color="gray") +
-  labs(title=paste(dateSlice,"Clusters"), fill="SNR Avg +/- SD") +
+  labs(title=paste("Step 2. Clusters"),subtitle=paste("Date: ",mydate,", Slice: ",myslice,", Clusters: ",k,sep=""), fill="SNR Avg +/- SD") +
   theme(
     axis.title.y = element_blank(),
     axis.title.x = element_blank(),
     panel.background = element_blank(),
     plot.title = element_text(hjust=0.5),
+    plot.subtitle = element_text(hjust=0.5),
     legend.position = "none"
   ) +
   guides(fill = guide_legend(keyheight = 0.9)) +
@@ -114,7 +115,7 @@ ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
                        colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
   )
 
-ggsave("Step2_clusterplot.jpg",height=6,width=6)
+ggsave("Step2_Clusters.jpg",height=6,width=6)
 
 ```
 
@@ -160,6 +161,11 @@ from collections import Counter
 pixel_cluster_data = r.pixel_cluster_data
 width = len(pixel_cluster_data)
 height = len(pixel_cluster_data[0])
+mydate = r.mydate
+myslice = r.myslice
+k = r.k
+ROI_diameter_cutoff = r.ROI_diameter_cutoff
+SNRcutoff = r.SNRcutoff
 
 # show cluster map which should be the same as plot above from R
 plt.matshow(pixel_cluster_data)
@@ -198,7 +204,7 @@ def check_cell(x, y, group_index, color, rdepth):
       cluster_results[y][x] == 0 and 
       (color == 0 or cell_value == color)):
     if(rdepth >= rlimit):
-      print ("HIT RECURSION LIMIT OF {} AT CELL {} {} RESULTS INNACURATE.".format(rlimit, x,y))
+      print ("HIT RECURSION LIMIT OF {} AT CELL {} {} RESULTS INACCURATE.".format(rlimit, x,y))
       return None
     rdepth += 1
     #print ("rdepth",rdepth,"x",x,"y",y,"index",group_index,"value",cell_value,"cluster",cluster_results[y][x])
@@ -233,9 +239,12 @@ for i in range(0,width):
 # to better see some clusters, decrease vmin and vmax
 plt.matshow(cluster_results,vmin=0,vmax=19)
 plt.show()
+
 plt.matshow(cluster_results)
+plt.suptitle("Step 3. All Potential ROIs",fontsize=15)
+plt.title("Date: %s, Slice: %s, Clusters: %d" % (mydate,myslice,k),fontsize=13)
 plt.show()
-plt.savefig("Step3_All_ROIs.jpg")
+plt.savefig("Step3_All_Potential_ROIs.jpg")
 r.cluster_results = cluster_results
 
 ```
@@ -261,7 +270,11 @@ r.cluster_results = cluster_results
 # to see all ROIs, where each ROI is its own color
 # plt.matshow(cluster_results,vmin=0,vmax=19)
 plt.matshow(cluster_results)
+plt.suptitle("Step 4. ROIs with Diameter <= Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
+# plt.title("ROIs with Diameter <= Cutoff - Date: %s, Slice: %s, Diameter: %d" % (mydate,myslice,ROI_diameter_cutoff))
 plt.show()
+plt.savefig("Step4_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
 
 ```
 
@@ -273,8 +286,8 @@ plt.show()
 pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 
 plt.matshow(pixel_cluster_data)
+plt.title("Clustered ROIs with Diam <= Cutoff - Date: %s, Slice: %s, Clusters: %d, Diam: %d" % (mydate,myslice,k,ROI_diameter_cutoff),fontsize=10)
 plt.show()
-plt.savefig("Step4_Clustered_ROIs_Correct_Size.jpg")
 
 ```
 
@@ -302,8 +315,11 @@ for i in range(0,width): #add electrode as new "roi"
 r.cluster_results = cluster_results
 
 plt.matshow(pixel_cluster_data)
+plt.suptitle("Step 5. Electrode and ROIs with Diameter <= Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
+# plt.title("ROIs with Electrode - Date: %s, Slice: %s" % (mydate,myslice))
 plt.show()
-plt.savefig("Step5_ROIs_Correct_Size_with_Electrode.jpg")
+plt.savefig("Step5_Electrode_and_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
 
 ```
 
@@ -340,6 +356,9 @@ for i in range(0,width):
 r.cluster_results = cluster_results
 
 plt.matshow(pixel_cluster_data)
+plt.suptitle("Step 6a. ROIs Not Touching Electrode",fontsize=15)
+plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+# plt.title("ROIs Not Touching Electrode - Date: %s, Slice: %s" % (mydate,myslice))
 plt.show()
 plt.savefig("Step6a_ROIs_not_Touching_Electrode.jpg")
 
@@ -384,6 +403,9 @@ r.cluster_results = cluster_results
 # plt.matshow(cluster_results,vmin=0,vmax=19)
 # plt.show()
 plt.matshow(cluster_results)
+plt.suptitle("Step 6b. ROIs Not Touching",fontsize=15)
+plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+# plt.title("ROIs Not Touching - Date: %s, Slice: %s" % (mydate,myslice))
 plt.show()
 plt.savefig("Step6b_ROIs_not_Touching.jpg")
 
@@ -422,8 +444,11 @@ r.roi_average = roi_averages
 r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 
 plt.matshow(roi_averages)
+plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
+# plt.title("ROIs with SNR > Cutoff - Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff))
 plt.show()
-plt.savefig("Step7_ROIs_Above_SNR_Cutoff.jpg")
+plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
 
 ```
 
@@ -438,6 +463,9 @@ for i in range(0,width): #add electrode as new "roi"
       roi_averages[j][i] = electrode_cluster
 
 plt.matshow(roi_averages)
+plt.suptitle("Step 8. Final ROIs with Electrode",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
+# plt.title("Final ROIs - Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff))
 plt.show()
 plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
 
