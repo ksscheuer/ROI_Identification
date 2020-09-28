@@ -13,16 +13,13 @@ knitr::knit_engines$set(python = reticulate::eng_python)
 knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-05-29_SS_notUsable/01-01and01-02")
   
 k <- 2 #number of clusters chosen by hand based on silhouette plot
-SNRcutoff <- 5
-ROI_diameter_cutoff <- 3 # max number of pixels for diameter of ROI
-upside_down <- 0 # 1 if upside-down, 0 if not
+ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
 myslice <- "01"
 mydate <- "05-29-2020"
-dateSlice <- paste(mydate,myslice,sep=" ")
+
+SNRcutoff <- 5
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
-
-## note that plots are saved in same location as this file, not working directory
 
 ```
 
@@ -46,7 +43,6 @@ myfiles <- read.csv("EachPixel_Data.csv",check.names = FALSE)
 
 electrodepixels <- read.csv("electrodepixels.csv",header=FALSE)
 electrodepixels <- electrodepixels+1 #photoZ starts counting with 0
-
 
 ############## Hierarchical clustering using chosen k ######################
 ############################################################################
@@ -168,8 +164,8 @@ ROI_diameter_cutoff = r.ROI_diameter_cutoff
 SNRcutoff = r.SNRcutoff
 
 # show cluster map which should be the same as plot above from R
-plt.matshow(pixel_cluster_data)
-plt.show()
+# plt.matshow(pixel_cluster_data)
+# plt.show()
 
 cluster_results = numpy.zeros((width,height))
 rlimit=5000
@@ -190,14 +186,6 @@ def combine_bound(bound1, bound2):
   ]
   return result
 
-### order apparently matters, eg 2020-09-10_FXR1_BC 04-01 doesn't work if xleft -> xright -> yup -> ydown
-### but does work if xleft -> xright -> ydown -> yup
-### worst option: manually change things to see if can get right combo
-### bad option: write some try/except thing to go through all permutations of directions and for each
-### permutation check if RecursionError and if so then try next permutation. Potential problem: maybe there
-### isn't a combo that works.
-### best option: figure out why order of directions matters
-
 def check_cell(x, y, group_index, color, rdepth):
   cell_value = pixel_cluster_data[y][x]
   if (cell_value != 0 and 
@@ -207,7 +195,6 @@ def check_cell(x, y, group_index, color, rdepth):
       print ("HIT RECURSION LIMIT OF {} AT CELL {} {} RESULTS INACCURATE.".format(rlimit, x,y))
       return None
     rdepth += 1
-    #print ("rdepth",rdepth,"x",x,"y",y,"index",group_index,"value",cell_value,"cluster",cluster_results[y][x])
     cluster_results[y][x] = group_index
     my_bound = [x,x,y,y]
     xleft = max(0, x-1) #x coordinate of pixel to L
@@ -236,9 +223,10 @@ for i in range(0,width):
     if result is not None:
       group_index += 1
       group_bound.append(result)
+      
 # to better see some clusters, decrease vmin and vmax
-plt.matshow(cluster_results,vmin=0,vmax=19)
-plt.show()
+# plt.matshow(cluster_results,vmin=0,vmax=19)
+# plt.show()
 
 plt.matshow(cluster_results)
 plt.suptitle("Step 3. All Potential ROIs",fontsize=15)
@@ -255,50 +243,47 @@ r.cluster_results = cluster_results
 ############################################################################
 
 bound_limit = r.ROI_diameter_cutoff
-# bound_limit = 3
 
 for i in range(0,len(group_bound)):
   group = group_bound[i]
   x_big = (group[1] - group[0]) > (bound_limit-1)
   y_big = (group[3] - group[2]) > (bound_limit-1)
   if x_big or y_big:
-    # print (i,group,x_big,y_big,"is out of bounds.")
     cluster_results[cluster_results == (i+1)] = 0 #0 vs 1 index mismatch ie counting from 0 here but index from 1 above
 
 r.cluster_results = cluster_results
 
 # to see all ROIs, where each ROI is its own color
 # plt.matshow(cluster_results,vmin=0,vmax=19)
+
 plt.matshow(cluster_results)
 plt.suptitle("Step 4. ROIs with Diameter <= Cutoff",fontsize=15)
 plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
-# plt.title("ROIs with Diameter <= Cutoff - Date: %s, Slice: %s, Diameter: %d" % (mydate,myslice,ROI_diameter_cutoff))
 plt.show()
 plt.savefig("Step4_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
-
-```
-
-```{python}
 
 ################ Separate remaining ROIs based on cluster ##################
 ############################################################################
 
 pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
 
-plt.matshow(pixel_cluster_data)
-plt.title("Clustered ROIs with Diam <= Cutoff - Date: %s, Slice: %s, Clusters: %d, Diam: %d" % (mydate,myslice,k,ROI_diameter_cutoff),fontsize=10)
-plt.show()
+# plt.matshow(pixel_cluster_data)
+# plt.title("Clustered ROIs with Diam <= Cutoff - Date: %s, Slice: %s, Clusters: %d, Diam: %d" % (mydate,myslice,k,ROI_diameter_cutoff),fontsize=10)
+# plt.show()
 
 ```
 
+
 ```{python}
+
 ############################ Add electrode #################
 ############################################################
 
 electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
+
 # to see just electrode plotted
-plt.matshow(electrode_data)
-plt.show()
+# plt.matshow(electrode_data)
+# plt.show()
 
 electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
 
@@ -317,7 +302,6 @@ r.cluster_results = cluster_results
 plt.matshow(pixel_cluster_data)
 plt.suptitle("Step 5. Electrode and ROIs with Diameter <= Cutoff",fontsize=15)
 plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
-# plt.title("ROIs with Electrode - Date: %s, Slice: %s" % (mydate,myslice))
 plt.show()
 plt.savefig("Step5_Electrode_and_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
 
@@ -332,8 +316,6 @@ electrode_x_min = r.electrode_x_min-1
 electrode_x_max = r.electrode_tip_x-1
 electrode_y_max = r.electrode_y_max-1
 electrode_y_min = r.electrode_y_min-1
-# electrode_y_max = r.electrode_y_min-1
-# electrode_y_min = r.electrode_y_max-1
 print (electrode_x_min,electrode_x_max,electrode_y_min,electrode_y_max)
 
 rois_touching_electrode = []
@@ -358,7 +340,6 @@ r.cluster_results = cluster_results
 plt.matshow(pixel_cluster_data)
 plt.suptitle("Step 6a. ROIs Not Touching Electrode",fontsize=15)
 plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
-# plt.title("ROIs Not Touching Electrode - Date: %s, Slice: %s" % (mydate,myslice))
 plt.show()
 plt.savefig("Step6a_ROIs_not_Touching_Electrode.jpg")
 
@@ -402,10 +383,10 @@ r.cluster_results = cluster_results
 # to better see some clusters, decrease vmin and vmax
 # plt.matshow(cluster_results,vmin=0,vmax=19)
 # plt.show()
+
 plt.matshow(cluster_results)
 plt.suptitle("Step 6b. ROIs Not Touching",fontsize=15)
 plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
-# plt.title("ROIs Not Touching - Date: %s, Slice: %s" % (mydate,myslice))
 plt.show()
 plt.savefig("Step6b_ROIs_not_Touching.jpg")
 
@@ -446,13 +427,13 @@ r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 plt.matshow(roi_averages)
 plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
 plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
-# plt.title("ROIs with SNR > Cutoff - Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff))
 plt.show()
 plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
 
 ```
 
 ```{python}
+
 ######################### Replot electrode #################################
 ############################################################################
 
@@ -465,7 +446,6 @@ for i in range(0,width): #add electrode as new "roi"
 plt.matshow(roi_averages)
 plt.suptitle("Step 8. Final ROIs with Electrode",fontsize=15)
 plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
-# plt.title("Final ROIs - Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff))
 plt.show()
 plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
 
@@ -507,13 +487,11 @@ final_rois$X <- final_rois_from_python[,1]+1
 final_rois$Y <- final_rois_from_python[,2]+1
 final_rois$SNR <- final_rois_from_python[,3]
 
-
 for (i in 1:nrow(final_rois)) {
   all_x <- which(myfiles_df_cl$X==final_rois$X[i])
   all_y <- which(myfiles_df_cl$Y==final_rois$Y[i])
   final_rois$Pixel_ID[i] <- intersect(all_x,all_y)
 }
-
 
 roi_index <- 0
 for (i in 1:length(unique(final_rois$SNR))) {
@@ -535,21 +513,17 @@ final_rois_no_electrode <- final_rois[-which(final_rois$ROI_ID==0),]
 datfilebreakpoints <- c(seq(1,nROIs-1,by=5),nROIs)
 for (i in 2:length(datfilebreakpoints)) {
   if ((nROIs-1)%%5!=0 & i==length(datfilebreakpoints)) {
-  # if (!is.integer(((nROIs-1)/5)) & i==length(datfilebreakpoints)) {
     tracesinfile <- (nROIs-1)%%5 # remainder so that if number ROIs not divisible by 5, final dat file ends with final ROI
   } else {
     tracesinfile <- 5
   }
   roiindexesinthisdatfile <- datfilebreakpoints[i-1]:(datfilebreakpoints[i]-1)
   datfile <- data.frame(matrix(ncol=1,nrow=((tracesinfile*3+1)+length(unlist(final_rois_no_electrode$Pixel_ID[roiindexesinthisdatfile])))))
-  # datfile <- data.frame(matrix(ncol=1,nrow=(16+length(final_rois_no_electrode$Pixel_ID[which(final_rois_no_electrode$ROI_ID==roiindexesinthisdatfile[j])])))
   colnames(datfile) <- NULL
   datfile[1,1] <- tracesinfile
   rowindex <- 2
   for (j in 1:tracesinfile) {
     pixelidsinthisroi <- final_rois_no_electrode$Pixel_ID[which(final_rois_no_electrode$ROI_ID==roiindexesinthisdatfile[j])]
-    # pixelidsinthisroi <- unlist(final_rois_no_electrode$Pixel_ID[which(final_rois_no_electrode$ROI_ID==roiindexesinthisdatfile[j])],recursive=FALSE)[[j]]
-    # pixelidsinthisroi <- pixelidsinthisroi-1 #PhotoZ starts counting at 0
     datfile[rowindex,1]  <- j-1
     datfile[rowindex+1,1] <- length(pixelidsinthisroi)+1
     datfile[rowindex+2,1]  <- j-1
@@ -561,8 +535,6 @@ for (i in 2:length(datfilebreakpoints)) {
             row.names = FALSE)
   }
 }
-
-
 
 ```
 
