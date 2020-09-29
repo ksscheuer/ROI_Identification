@@ -3,8 +3,8 @@
 
 maxkclust <- 10 #maximum number of potential clusters
 pixelcutoff <- 0.5 #before clustering, eliminate pixels with lowest SNR
-myslice <- "04-01"
-mydate <- "07-11-2020"
+myslice <- "02-01"
+mydate <- "09-16-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
 saveoriginalplot <- 1 #1 = save, 0 = don't save
@@ -17,15 +17,16 @@ plotwidth <- 5.75
 ############# Load libraries, load data, and make df to fill ###############
 ############################################################################
 
-library(dendextend)
-library(ggplot2)
-library(colorRamps)
-library(dplyr)
-library(factoextra)
-library(reshape2)
-library(stringr)
-library(tibble)
-library(RColorBrewer)
+suppressMessages(suppressWarnings(library(dendextend)))
+suppressMessages(suppressWarnings(library(ggplot2)))
+suppressMessages(suppressWarnings(library(colorRamps)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(factoextra)))
+suppressMessages(suppressWarnings(library(reshape2)))
+suppressMessages(suppressWarnings(library(stringr)))
+suppressMessages(suppressWarnings(library(tibble)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+
 
 clusteraverages_all <- data.frame(matrix(nrow=maxkclust,ncol=maxkclust))
 colnames(clusteraverages_all) <- paste(rep("TotalClust"),1:maxkclust,sep="")

@@ -10,12 +10,12 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-05-29_SS_notUsable/01-01and01-02")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-09-17_BC/07-01_aka_06-01")
   
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "01"
-mydate <- "05-29-2020"
+myslice <- "07"
+mydate <- "09-17-2020"
 
 SNRcutoff <- 5
 height = 80 #number of pixels in y axis
@@ -121,12 +121,7 @@ ggsave("Step2_Clusters.jpg",height=6,width=6)
 
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
-
-if (upside_down==0) {
-  pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
-} else {
-  pixel_sn_data <- matrix(myfiles_df_cl$Avg, ncol=width, nrow=height)
-}
+pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
 
 myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
 for (i in 1:nrow(electrodepixels)) {
