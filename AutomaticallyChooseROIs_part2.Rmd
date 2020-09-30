@@ -10,12 +10,12 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-09-17_BC/07-01_aka_06-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-02_SS/01-01ie03-01")
   
-k <- 2 #number of clusters chosen by hand based on silhouette plot
+k <- 3 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "07"
-mydate <- "09-17-2020"
+myslice <- "01"
+mydate <- "07-02-2020"
 
 SNRcutoff <- 5
 height = 80 #number of pixels in y axis
@@ -479,6 +479,7 @@ final_rois_from_python <- matrix(unlist(pixel_coords_for_all_rois),nrow = total_
 final_rois <- data.frame(matrix(ncol=5,nrow=nrow(final_rois_from_python)))
 colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
 final_rois$X <- final_rois_from_python[,1]+1
+# final_rois$X <- final_rois_from_python[,1]
 final_rois$Y <- final_rois_from_python[,2]+1
 final_rois$SNR <- final_rois_from_python[,3]
 
@@ -522,7 +523,7 @@ for (i in 2:length(datfilebreakpoints)) {
     datfile[rowindex,1]  <- j-1
     datfile[rowindex+1,1] <- length(pixelidsinthisroi)+1
     datfile[rowindex+2,1]  <- j-1
-    datfile[(rowindex+3):(rowindex+3+length(pixelidsinthisroi)-1),1] <- pixelidsinthisroi
+    datfile[(rowindex+3):(rowindex+3+length(pixelidsinthisroi)-1),1] <- pixelidsinthisroi-1
     rowindex <- rowindex+3+length(pixelidsinthisroi)
   write.table(datfile,
             # paste(min(roiindexesinthisdatfile),"to",max(roiindexesinthisdatfile),".dat",sep=""),
