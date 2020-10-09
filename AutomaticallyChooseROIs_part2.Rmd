@@ -10,14 +10,17 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-02_SS/01-01ie03-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/01-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-02_SS/08-01")
   
-k <- 3 #number of clusters chosen by hand based on silhouette plot
+k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "01"
-mydate <- "07-02-2020"
+myslice <- "04"
+mydate <- "07-11-2020"
 
-SNRcutoff <- 5
+SNRcutoff <- 2.902257
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
 
@@ -80,16 +83,64 @@ for (i in 1:k) {
   clusteraverages_all$SD[i] <- myclustersd
 }
 
-if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
+# if (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
+#   print("No clusters with average SNR > SNR cutoff")
+#   clustercutoff <- (which(clusteraverages$StN_Avg>SNRcutoff))-1
+# } else {
+#   clustercutoff <- 0
+# }
+
+if (length(which(clusteraverages$StN_Avg>SNRcutoff))==0) {
   print("No clusters with average SNR > SNR cutoff")
-  clustercutoff <- (which(clusteraverages$StN_Avg>SNRcutoff))-1
 } else {
   clustercutoff <- 0
 }
 
+
+
+# (((min(which(clusteraverages$StN_Avg>SNRcutoff)))-1)>0) {
+#   print("No clusters with average SNR > SNR cutoff")
+#   clustercutoff <- (which(clusteraverages$StN_Avg>SNRcutoff))-1
+# } else {
+#   clustercutoff <- 0
+# }
+
+
+# SNRcutoff <- mean(myfiles_df_cl$Avg)+2*sd(myfiles_df_cl$Avg)
+
+ggplot(myfiles_df_cl,aes(x=myfiles_df_cl$Avg)) +
+  geom_histogram() 
+  # geom_vline(xintercept=SNRcutoff)
+
+ggplot(myfiles_df_cl,aes(x=myfiles_df_cl$AvgGps)) +
+  geom_histogram() 
+  # geom_vline(xintercept=SNRcutoff)
+
+ggplot(log(myfiles_df_cl),aes(x=log(myfiles_df_cl$AvgGps))) +
+  geom_histogram() 
+  # geom_vline(xintercept=SNRcutoff)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ```
 
-``` {r fig.width=6, fig.height=6}
+``` {r fig.width=7, fig.height=6}
 ######################### Plot clusters ####################################
 ############################################################################
 
@@ -101,8 +152,8 @@ ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
     axis.title.x = element_blank(),
     panel.background = element_blank(),
     plot.title = element_text(hjust=0.5),
-    plot.subtitle = element_text(hjust=0.5),
-    legend.position = "none"
+    plot.subtitle = element_text(hjust=0.5)
+    # legend.position = "none"
   ) +
   guides(fill = guide_legend(keyheight = 0.9)) +
   scale_y_reverse() +
@@ -415,13 +466,18 @@ background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most ofte
 roi_averages[roi_averages == background_snr] = 0 #set background to 0
 r.roi_average = roi_averages
 
+
+SNRcutoff = 4
+
+
+
 roi_averages[roi_averages < SNRcutoff] = 0
 r.roi_average = roi_averages
 r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 
 plt.matshow(roi_averages)
 plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
-plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
 plt.show()
 plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
 
@@ -440,7 +496,7 @@ for i in range(0,width): #add electrode as new "roi"
 
 plt.matshow(roi_averages)
 plt.suptitle("Step 8. Final ROIs with Electrode",fontsize=15)
-plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
 plt.show()
 plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
 

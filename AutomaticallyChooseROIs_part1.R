@@ -1,10 +1,39 @@
+
+
+
+
+
+
+
+# TODO: MAKE INITIAL CUTOFF BASED ON 95TH PERCENTILE SNR FOR NO STIM CONTROL OR FOR 40 FRAMES AT FRAME 200
+
+# TODO: KEEP ONLY TOP 10? 15? 5? ROIS; PLOT FINAL ROIS WITH SNR AND ELECTRODE 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ########################## Set initial values###############################
 ############################################################################
 
 maxkclust <- 10 #maximum number of potential clusters
-pixelcutoff <- 0.5 #before clustering, eliminate pixels with lowest SNR
+# pixelcutoff <- 0.5 #before clustering, eliminate pixels with lowest SNR
 myslice <- "02-01"
-mydate <- "09-16-2020"
+mydate <- "07-11-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
 saveoriginalplot <- 1 #1 = save, 0 = don't save
@@ -55,6 +84,10 @@ for (i in 1:length(myfilelist)) {
 }
 
 myfiles$Avg <- rowMeans(myfiles[,4:(ncol(myfiles)-2)])
+
+
+pixelcutoff <- 2.902257/max(myfiles$Avg)
+
 
 fromlargesttosmalleststn <- myfiles$PixelID[order(myfiles$Avg,decreasing = TRUE)]
 tokeepid <- fromlargesttosmalleststn[1:length(fromlargesttosmalleststn)*pixelcutoff]
