@@ -10,17 +10,19 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-06-26_SS_FXR1/03-01")
+# knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/04-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/01-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-11_ACC/02-01")
 # knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-02_SS/08-01")
   
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "04"
-mydate <- "07-11-2020"
+myslice <- "03"
+mydate <- "06-29-2019"
 
-SNRcutoff <- 2.902257
+# SNRcutoff <- 2.902257
+n_ROIs_highest_SNR <- 15
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
 
@@ -90,11 +92,11 @@ for (i in 1:k) {
 #   clustercutoff <- 0
 # }
 
-if (length(which(clusteraverages$StN_Avg>SNRcutoff))==0) {
-  print("No clusters with average SNR > SNR cutoff")
-} else {
-  clustercutoff <- 0
-}
+# if (length(which(clusteraverages$StN_Avg>SNRcutoff))==0) {
+#   print("No clusters with average SNR > SNR cutoff")
+# } else {
+#   clustercutoff <- 0
+# }
 
 
 
@@ -108,17 +110,17 @@ if (length(which(clusteraverages$StN_Avg>SNRcutoff))==0) {
 
 # SNRcutoff <- mean(myfiles_df_cl$Avg)+2*sd(myfiles_df_cl$Avg)
 
-ggplot(myfiles_df_cl,aes(x=myfiles_df_cl$Avg)) +
-  geom_histogram() 
-  # geom_vline(xintercept=SNRcutoff)
-
-ggplot(myfiles_df_cl,aes(x=myfiles_df_cl$AvgGps)) +
-  geom_histogram() 
-  # geom_vline(xintercept=SNRcutoff)
-
-ggplot(log(myfiles_df_cl),aes(x=log(myfiles_df_cl$AvgGps))) +
-  geom_histogram() 
-  # geom_vline(xintercept=SNRcutoff)
+# ggplot(myfiles_df_cl,aes(x=myfiles_df_cl$Avg)) +
+#   geom_histogram() 
+#   # geom_vline(xintercept=SNRcutoff)
+# 
+# ggplot(myfiles_df_cl,aes(x=myfiles_df_cl$AvgGps)) +
+#   geom_histogram() 
+#   # geom_vline(xintercept=SNRcutoff)
+# 
+# ggplot(log(myfiles_df_cl),aes(x=log(myfiles_df_cl$AvgGps))) +
+#   geom_histogram() 
+#   # geom_vline(xintercept=SNRcutoff)
 
 
 
@@ -162,7 +164,7 @@ ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
                        colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
   )
 
-ggsave("Step2_Clusters.jpg",height=6,width=6)
+ggsave("Step2_Clusters.jpg",height=6,width=7.5)
 
 ```
 
@@ -207,7 +209,7 @@ mydate = r.mydate
 myslice = r.myslice
 k = r.k
 ROI_diameter_cutoff = r.ROI_diameter_cutoff
-SNRcutoff = r.SNRcutoff
+# SNRcutoff = r.SNRcutoff
 
 # show cluster map which should be the same as plot above from R
 # plt.matshow(pixel_cluster_data)
@@ -440,11 +442,11 @@ plt.savefig("Step6b_ROIs_not_Touching.jpg")
 
 ```{python}
 
-###### Remove ROIs with SNR < cutoff for average of all control trials #####
+################## Keep only n ROIs with highest SNR #######################
 ############################################################################
 
 pixel_sn_data = r.pixel_sn_data
-SNRcutoff = r.SNRcutoff
+# SNRcutoff = r.SNRcutoff
 
 roi_averages = numpy.zeros((width,height))
 
@@ -452,10 +454,10 @@ for roi_group_index in numpy.unique(cluster_results):
   location_index = (cluster_results == roi_group_index)
   sn_data_for_group = pixel_sn_data * location_index
   average = sn_data_for_group[sn_data_for_group != 0].mean()
-  if average > SNRcutoff:
-    print (average)
-  else:
-    print ("Below SNR threshold.")
+  # if average > SNRcutoff:
+  #   print (average)
+  # else:
+  #   print ("Below SNR threshold.")
   roi_averages += (cluster_results == roi_group_index) * average
 
 r.roi_average = roi_averages
@@ -465,21 +467,35 @@ snr_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
 background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most often ie background
 roi_averages[roi_averages == background_snr] = 0 #set background to 0
 r.roi_average = roi_averages
+n_ROIs_highest_SNR = r.n_ROIs_highest_SNR
+
+roi_averages_to_keep = numpy.unique(roi_averages)[range(numpy.unique(roi_averages).size-(int(n_ROIs_highest_SNR)),numpy.unique(roi_averages).size)]
+
+# top_roi_averages = numpy.zeros((width,height))
+# 
+# for i in range(0,width):
+#   for j in range(0,height):
+#     if roi_averages[x][y] in roi_averages_to_keep:
+#       top_roi_averages[x][y] = roi_averages[x][y]
+# plt.matshow(top_roi_averages)
+# plt.show()
+
+# SNRcutoff = 4
 
 
-SNRcutoff = 4
 
-
-
-roi_averages[roi_averages < SNRcutoff] = 0
-r.roi_average = roi_averages
-r.roi_averages = roi_averages[roi_averages > SNRcutoff]
+roi_averages[roi_averages < roi_averages_to_keep[0]] = 0
+r.roi_averages = roi_averages
+r.roi_averages = roi_averages[roi_averages >= roi_averages_to_keep[0]]
 
 plt.matshow(roi_averages)
-plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
-plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
+# plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
+# plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
 plt.show()
-plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
+# plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
+# plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+
+plt.savefig("Step7_%d_ROI_with_Highest_SNR.jpg" % n_ROIs_highest_SNR,fontsize=13)
 
 ```
 
@@ -496,7 +512,7 @@ for i in range(0,width): #add electrode as new "roi"
 
 plt.matshow(roi_averages)
 plt.suptitle("Step 8. Final ROIs with Electrode",fontsize=15)
-plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
+# plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
 plt.show()
 plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
 

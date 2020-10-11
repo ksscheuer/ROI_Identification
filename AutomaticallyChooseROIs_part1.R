@@ -1,45 +1,17 @@
 
-
-
-
-
-
-
-# TODO: MAKE INITIAL CUTOFF BASED ON 95TH PERCENTILE SNR FOR NO STIM CONTROL OR FOR 40 FRAMES AT FRAME 200
-
-# TODO: KEEP ONLY TOP 10? 15? 5? ROIS; PLOT FINAL ROIS WITH SNR AND ELECTRODE 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ########################## Set initial values###############################
 ############################################################################
 
 maxkclust <- 10 #maximum number of potential clusters
 # pixelcutoff <- 0.5 #before clustering, eliminate pixels with lowest SNR
-myslice <- "02-01"
-mydate <- "07-11-2020"
+myslice <- "03-01"
+# myslice_plot_name <- "01-01"
+mydate <- "06-26-2019"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
-saveoriginalplot <- 1 #1 = save, 0 = don't save
-saveelbowplot <- 1 #1 = save, 0 = don't save
-savesilhouetteplot <- 1 #1 = save, 0 = don't save
-saveclusterplot <- 0 #1 = save, 0 = don't save
+# saveoriginalplot <- 1 #1 = save, 0 = don't save
+# saveelbowplot <- 1 #1 = save, 0 = don't save
+# savesilhouetteplot <- 1 #1 = save, 0 = don't save
 plotheight <- 5
 plotwidth <- 5.75
 
@@ -55,15 +27,47 @@ suppressMessages(suppressWarnings(library(reshape2)))
 suppressMessages(suppressWarnings(library(stringr)))
 suppressMessages(suppressWarnings(library(tibble)))
 suppressMessages(suppressWarnings(library(RColorBrewer)))
-
+suppressMessages(suppressWarnings(library(stringr)))
 
 clusteraverages_all <- data.frame(matrix(nrow=maxkclust,ncol=maxkclust))
 colnames(clusteraverages_all) <- paste(rep("TotalClust"),1:maxkclust,sep="")
 rownames(clusteraverages_all) <- paste(rep("AvgCluster"),1:maxkclust,sep="")
 
 myfilenames <- list.files(pattern=".txt")
-myfilenames <- myfilenames[which(str_detect(myfilenames,myslice)==TRUE)]
+nostimfilenames <- myfilenames[str_detect(myfilenames,"_noStim")]
+myfilenames <- myfilenames[!str_detect(myfilenames,"_noStim")]
+nostimfilelist <- lapply(nostimfilenames,read.table)
 myfilelist <- lapply(myfilenames,read.table)
+
+################ Find SNR cutoff based on no stim file #####################
+############################################################################
+
+nostimfiles <- as.data.frame(matrix(ncol=length(nostimfilelist)+1,
+                                nrow=nrow(myfilelist[[1]])))
+colnames(nostimfiles) <- c(gsub(".txt","",nostimfilenames),"Average")
+for (i in 1:length(nostimfilelist)) {
+  nostimfiles[,i] <- nostimfilelist[[i]][,2]
+}
+
+if (length(nostimfilelist) > 1) {
+  nostimfiles$Average <- rowMeans(nostimfiles[,1:(length(nostimfiles)-1)])
+} else {
+  nostimfiles$Average <- nostimfiles[,1]
+}
+
+SNRcutoff <- qnorm(0.95,mean=mean(nostimfiles$Average),sd=sd(nostimfiles$Average))
+
+################ Plot SNR cutoff based on no stim file #####################
+############################################################################
+
+ggplot(nostimfiles,aes(x=nostimfiles$Average)) +
+  geom_density() +
+  labs(x="SNR",title=paste("No Stim SNR, 95th %ile Cutoff = ",round(SNRcutoff,3))) +
+  geom_vline(xintercept=SNRcutoff) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggsave("Step0a_SNRcutoff.jpg")
 
 ######################### Average data #####################################
 ############################################################################
@@ -83,26 +87,49 @@ for (i in 1:length(myfilelist)) {
   myfiles[,i+3] <- myfilelist[[i]][,2]
 }
 
+myfiles_SNRcutoff <- myfiles[,c(1:(ncol(myfiles)-2))]
+for (i in 1:length(myfilenames)) {
+  for (j in 1:nrow(myfiles_SNRcutoff)) {
+    if (myfiles_SNRcutoff[j,3+i] <= SNRcutoff) {
+      myfiles_SNRcutoff[j,3+i] <- NA
+    }
+  }
+}
+
+
 myfiles$Avg <- rowMeans(myfiles[,4:(ncol(myfiles)-2)])
-
-
-pixelcutoff <- 2.902257/max(myfiles$Avg)
-
-
-fromlargesttosmalleststn <- myfiles$PixelID[order(myfiles$Avg,decreasing = TRUE)]
-tokeepid <- fromlargesttosmalleststn[1:length(fromlargesttosmalleststn)*pixelcutoff]
+myfiles$AvgGps <- myfiles$Avg
 for (i in 1:nrow(myfiles)) {
-  if (myfiles$PixelID[i] %in% tokeepid) {
-    myfiles$AvgGps[i] <- myfiles$Avg[i]
+  if (myfiles$Avg[i] <= SNRcutoff) {
+    myfiles$AvgGps[i] <- NA
   }
 }
 
 ############################# Plot data ####################################
 ############################################################################
 
+for (i in 1:(ncol(myfiles_SNRcutoff)-3)) {
+  ggplot(myfiles_SNRcutoff,aes(x=X,y=Y)) +
+    geom_tile(aes(fill=myfiles_SNRcutoff[,3+i])) +
+    labs(title=paste(dateSlice)) +
+    theme(
+      axis.title.y = element_blank(),
+      axis.title.x = element_blank(),
+      axis.ticks = element_blank(),
+      axis.text = element_blank(),
+      panel.background = element_blank(),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust=0.5)
+    ) +
+    scale_y_reverse() +
+    scale_fill_gradientn(colors=rev(c(
+      "red1","yellow1","green1","dodgerblue1","navy"))
+    )
+  ggsave(paste("Step0b_IndivHeatmap_",colnames(myfiles_SNRcutoff)[i+3],".jpg",sep=""))
+}
+
 ggplot(myfiles,aes(x=X,y=Y)) +
   geom_tile(aes(fill=myfiles$AvgGps)) +
-  # geom_tile(aes(fill=myfiles$`04-01-08`)) +
   labs(title=paste(dateSlice)) +
   theme(
     axis.title.y = element_blank(),
@@ -117,10 +144,7 @@ ggplot(myfiles,aes(x=X,y=Y)) +
   scale_fill_gradientn(colors=rev(c(
   "red1","yellow1","green1","dodgerblue1","navy"))
 )
-
-if (saveoriginalplot==1) {
-  ggsave("Step0_AvgHeatmap.jpg",height=plotheight,width=plotwidth)
-}
+ggsave("Step0c_AvgHeatmap.jpg",height=plotheight,width=plotwidth)
 
 ######### hierarchical clustering: find optimal number of clusters  ########
 ############################################################################
@@ -134,74 +158,13 @@ myclustAvgGps_df_sc <- as.data.frame(myclusterdata$AvgGps)
 
 elbowplot <- fviz_nbclust(myclustAvgGps_df_sc, hcut, method = "wss")  #hcut based on hclust which is agglomerative
 elbowplot
-if (saveelbowplot==1) {
-  ggsave("Step1a_elbowplot.jpeg",height=plotheight,width=plotwidth)
-}
+ggsave("Step1a_elbowplot.jpeg",height=plotheight,width=plotwidth)
+
 
 silhouetteplot <- fviz_nbclust(myclustAvgGps_df_sc, hcut, method = "silhouette")
 silhouetteplot
-if (savesilhouetteplot==1) {
-  ggsave("Step1b_silhouetteplot.jpeg",height=plotheight,width=plotwidth)
-}
+ggsave("Step1b_silhouetteplot.jpeg",height=plotheight,width=plotwidth)
 # gap plot takes too long to make and usually says only one cluster
-
-################# hierarchical clustering: loop through all k ###################
-############################################################################
-
-for (k in 2:maxkclust) {
-  dist_mat <- dist(myclustAvgGps_df_sc,method="euclidean")
-  hclust_avg <- hclust(dist_mat,method="average")
-  cut_avg <- cutree(hclust_avg,k=k)
-  
-  avg_dend_obj <- as.dendrogram(hclust_avg)
-  avg_col_dend <- color_branches(avg_dend_obj,h=k)
-
-  myclusterdata_df_cl <- mutate(myclusterdata, cluster = cut_avg)
-  
-  myfiles_df_cl <- data.frame(matrix(ncol=ncol(myfiles)+1,
-                                     nrow=nrow(myfiles)))
-  colnames(myfiles_df_cl) <- c(colnames(myfiles),"Cluster")
-  myfiles_df_cl[,1:ncol(myfiles)] <- myfiles[,1:ncol(myfiles)]
-  for (i in 1:nrow(myclusterdata_df_cl)) {
-    myclusterpixelid <- which(myfiles_df_cl$PixelID==myclusterdata_df_cl$PixelID[i])
-    myfiles_df_cl$Cluster[myclusterpixelid] <- myclusterdata_df_cl$cluster[i]
-  }
-
-########## Loop through all clusters and plot each cluster #################
-
-  clusteraverages <- data.frame(matrix(ncol=2,nrow=k))
-  colnames(clusteraverages) <- c("k","StN_Avg")
-  clusteraverages$k <- seq(1:k)
-  for (i in 1:k) {
-    allcolmeans <- colMeans(myfiles_df_cl[which(myfiles_df_cl$Cluster==i),])
-    clusteraverages$StN_Avg[i] <- allcolmeans[which(colnames(myfiles_df_cl)=="AvgGps")]
-    clusteraverages_all[i,k] <- clusteraverages$StN_Avg[i]
-  }
-  
-  ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
-    geom_tile(aes(fill=myfiles_df_cl$Cluster)) +
-    labs(title=dateSlice) +
-    theme(
-      axis.title.y = element_blank(),
-      axis.title.x = element_blank(),
-      axis.ticks = element_blank(),
-      axis.text = element_blank(),
-      panel.background = element_blank(),
-      legend.title = element_blank(),
-      plot.title = element_text(hjust=0.5)
-    ) +
-    guides(fill = guide_legend(keyheight = 0.9)) +
-    scale_y_reverse() +
-    scale_fill_gradientn(breaks=seq(1:k),
-                         labels=round(clusteraverages$StN_Avg,3),
-                         colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
-    )
-  
-  clusterplotname <- paste(k,"_ClusteredAvgHeatmap.jpeg",sep="")
-  if (saveclusterplot==1) {
-    ggsave(clusterplotname,height=plotheight,width=plotwidth)
-  }
-}  
 
 ####################### Save cluster data as csv ###########################
 ############################################################################
