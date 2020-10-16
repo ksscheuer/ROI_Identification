@@ -4,16 +4,10 @@
 
 maxkclust <- 10 #maximum number of potential clusters
 # pixelcutoff <- 0.5 #before clustering, eliminate pixels with lowest SNR
-myslice <- "03-01"
+myslice <- "05-01"
 # myslice_plot_name <- "01-01"
-mydate <- "06-26-2019"
+mydate <- "09-11-2020"
 dateSlice <- paste(mydate,myslice,sep=" ")
-
-# saveoriginalplot <- 1 #1 = save, 0 = don't save
-# saveelbowplot <- 1 #1 = save, 0 = don't save
-# savesilhouetteplot <- 1 #1 = save, 0 = don't save
-plotheight <- 5
-plotwidth <- 5.75
 
 ############# Load libraries, load data, and make df to fill ###############
 ############################################################################
@@ -67,7 +61,7 @@ ggplot(nostimfiles,aes(x=nostimfiles$Average)) +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
 
-ggsave("Step0a_SNRcutoff.jpg")
+ggsave("Step0a_SNRcutoff.jpg",width=6,height=6)
 
 ######################### Average data #####################################
 ############################################################################
@@ -78,9 +72,7 @@ colnames(myfiles) <- c("PixelID","X","Y",
                        gsub(".txt","",myfilenames),
                        "Avg","AvgGps")
 myfiles$PixelID <- myfilelist[[1]][,1]
-# myfiles$X <- rep(1:80,80)
 myfiles$X <- rep(1:80,80)
-# myfiles$Y <- rep(rev(1:80),each=80)
 myfiles$Y <- rep(1:80,each=80)
 
 for (i in 1:length(myfilelist)) {
@@ -125,7 +117,7 @@ for (i in 1:(ncol(myfiles_SNRcutoff)-3)) {
     scale_fill_gradientn(colors=rev(c(
       "red1","yellow1","green1","dodgerblue1","navy"))
     )
-  ggsave(paste("Step0b_IndivHeatmap_",colnames(myfiles_SNRcutoff)[i+3],".jpg",sep=""))
+  ggsave(paste("Step0b_IndivHeatmap_",colnames(myfiles_SNRcutoff)[i+3],".jpg",sep=""),width=6.5,height=6)
 }
 
 ggplot(myfiles,aes(x=X,y=Y)) +
@@ -144,7 +136,7 @@ ggplot(myfiles,aes(x=X,y=Y)) +
   scale_fill_gradientn(colors=rev(c(
   "red1","yellow1","green1","dodgerblue1","navy"))
 )
-ggsave("Step0c_AvgHeatmap.jpg",height=plotheight,width=plotwidth)
+ggsave("Step0c_AvgHeatmap.jpg",height=6,width=6.5)
 
 ######### hierarchical clustering: find optimal number of clusters  ########
 ############################################################################
@@ -158,12 +150,12 @@ myclustAvgGps_df_sc <- as.data.frame(myclusterdata$AvgGps)
 
 elbowplot <- fviz_nbclust(myclustAvgGps_df_sc, hcut, method = "wss")  #hcut based on hclust which is agglomerative
 elbowplot
-ggsave("Step1a_elbowplot.jpeg",height=plotheight,width=plotwidth)
+ggsave("Step1a_elbowplot.jpeg",height=6,width=6)
 
 
 silhouetteplot <- fviz_nbclust(myclustAvgGps_df_sc, hcut, method = "silhouette")
 silhouetteplot
-ggsave("Step1b_silhouetteplot.jpeg",height=plotheight,width=plotwidth)
+ggsave("Step1b_silhouetteplot.jpeg",height=6,width=6)
 # gap plot takes too long to make and usually says only one cluster
 
 ####################### Save cluster data as csv ###########################
