@@ -10,12 +10,13 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-09-11_FXR1_BC/05-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-06-27_SS_FXR1/04-01_FIX_ELECTRODE_ROI")
 
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "05"
-mydate <- "09-11-2020"
+myslice <- "04"
+mydate <- "06-27-2019"
+SNRcutoff <- 4
 
 n_ROIs_highest_SNR <- 15
 height = 80 #number of pixels in y axis
@@ -386,6 +387,7 @@ plt.savefig("Step6b_ROIs_not_Touching.jpg")
 ############################################################################
 
 pixel_sn_data = r.pixel_sn_data
+SNRcutoff = r.SNRcutoff
 
 roi_averages = numpy.zeros((width,height))
 
@@ -393,6 +395,10 @@ for roi_group_index in numpy.unique(cluster_results):
   location_index = (cluster_results == roi_group_index)
   sn_data_for_group = pixel_sn_data * location_index
   average = sn_data_for_group[sn_data_for_group != 0].mean()
+  if average > SNRcutoff:
+    print (average)
+  else:
+    print ("Below SNR threshold.")
   roi_averages += (cluster_results == roi_group_index) * average
 
 r.roi_average = roi_averages
@@ -402,28 +408,57 @@ snr_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
 background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most often ie background
 roi_averages[roi_averages == background_snr] = 0 #set background to 0
 r.roi_average = roi_averages
-n_ROIs_highest_SNR = r.n_ROIs_highest_SNR
+# n_ROIs_highest_SNR = r.n_ROIs_highest_SNR
 
-roi_averages_to_keep = numpy.unique(roi_averages)[range(numpy.unique(roi_averages).size-(int(n_ROIs_highest_SNR)),numpy.unique(roi_averages).size)]
+roi_averages[roi_averages < SNRcutoff] = 0
+r.roi_average = roi_averages
+r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 
-if numpy.unique(roi_averages).size > 15: #if at least 15 ROIs left after step 6
-  roi_averages_to_keep = numpy.unique(roi_averages)[range(numpy.unique(roi_averages).size-(int(n_ROIs_highest_SNR)),numpy.unique(roi_averages).size)]
-  roi_averages[roi_averages < roi_averages_to_keep[0]] = 0
-  r.roi_averages = roi_averages
-  r.roi_averages = roi_averages[roi_averages >= roi_averages_to_keep[0]]
-  plt.matshow(roi_averages)
-  plt.suptitle("Step 7. %d ROIs with Highest SNR" % n_ROIs_highest_SNR,fontsize=15)
-  plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
-  plt.show()
-  plt.savefig("Step7_%d_ROI_with_Highest_SNR.jpg" % n_ROIs_highest_SNR,fontsize=13)
-else:
-  r.roi_averages = roi_averages
-  nrois = numpy.unique(roi_averages).size-1
-  plt.matshow(roi_averages)
-  plt.suptitle("Step 7. %d ROIs with Highest SNR" % nrois,fontsize=15)
-  plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
-  plt.show()
-  plt.savefig("Step7_%d_ROI_with_Highest_SNR.jpg" % nrois,fontsize=13)
+plt.matshow(roi_averages)
+plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# roi_averages_to_keep = numpy.unique(roi_averages)[range(numpy.unique(roi_averages).size-(int(n_ROIs_highest_SNR)),numpy.unique(roi_averages).size)]
+# 
+# if numpy.unique(roi_averages).size > 15: #if at least 15 ROIs left after step 6
+#   roi_averages_to_keep = numpy.unique(roi_averages)[range(numpy.unique(roi_averages).size-(int(n_ROIs_highest_SNR)),numpy.unique(roi_averages).size)]
+#   roi_averages[roi_averages < roi_averages_to_keep[0]] = 0
+#   r.roi_averages = roi_averages
+#   r.roi_averages = roi_averages[roi_averages >= roi_averages_to_keep[0]]
+#   plt.matshow(roi_averages)
+#   plt.suptitle("Step 7. %d ROIs with Highest SNR" % n_ROIs_highest_SNR,fontsize=15)
+#   plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+#   plt.show()
+#   plt.savefig("Step7_%d_ROI_with_Highest_SNR.jpg" % n_ROIs_highest_SNR,fontsize=13)
+# else:
+#   r.roi_averages = roi_averages
+#   nrois = numpy.unique(roi_averages).size-1
+#   plt.matshow(roi_averages)
+#   plt.suptitle("Step 7. %d ROIs with Highest SNR" % nrois,fontsize=15)
+#   plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+#   plt.show()
+#   plt.savefig("Step7_%d_ROI_with_Highest_SNR.jpg" % nrois,fontsize=13)
 
 
 ```
