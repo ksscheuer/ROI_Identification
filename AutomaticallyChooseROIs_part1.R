@@ -3,10 +3,8 @@
 ############################################################################
 
 maxkclust <- 10 #maximum number of potential clusters
-# pixelcutoff <- 0.5 #before clustering, eliminate pixels with lowest SNR
-myslice <- "05-01"
-# myslice_plot_name <- "01-01"
-mydate <- "09-11-2020"
+myslice <- "04-01"
+mydate <- "Test"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
 ############# Load libraries, load data, and make df to fill ###############
@@ -87,7 +85,6 @@ for (i in 1:length(myfilenames)) {
     }
   }
 }
-
 
 myfiles$Avg <- rowMeans(myfiles[,4:(ncol(myfiles)-2)])
 myfiles$AvgGps <- myfiles$Avg
