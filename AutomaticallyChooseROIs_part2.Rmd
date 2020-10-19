@@ -10,13 +10,14 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/from Allie/SNR cutoff test")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-06-26_SS_FXR1/01-01")
 
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "04"
-mydate <- "Test"
+myslice <- "01"
+mydate <- "2019-06-26"
 SNRcutoff <- 4
+Ampcutoff <- 0.001
 
 n_ROIs_highest_SNR <- 15
 height = 80 #number of pixels in y axis
@@ -40,7 +41,8 @@ suppressMessages(suppressWarnings(library(reticulate)))
 myclusterdata <- read.csv("EachPixel_Cluster.csv",check.names = FALSE)
 myclustAvgGps_df_sc <- as.data.frame(myclusterdata$AvgGps)
 
-myfiles <- read.csv("EachPixel_Data.csv",check.names = FALSE)
+myfiles <- read.csv("EachPixel_SNR_Data.csv",check.names = FALSE)
+ampfiles <- read.csv("EachPixel_Amp_Data.csv",check.names = FALSE)
 
 electrodepixels <- read.csv("electrodepixels.csv",header=FALSE)
 electrodepixels <- electrodepixels+1 #photoZ starts counting with 0
@@ -116,6 +118,7 @@ ggsave("Step2_Clusters.jpg",height=6,width=7.5)
 pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
 pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
+pixel_amp_data <- t(matrix(ampfiles$Avg, ncol=width, nrow=height))
 
 myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
 for (i in 1:nrow(electrodepixels)) {
@@ -413,10 +416,64 @@ r.roi_average = roi_averages
 r.roi_averages = roi_averages[roi_averages > SNRcutoff]
 
 plt.matshow(roi_averages)
-plt.suptitle("Step 7. ROIs with SNR > Cutoff",fontsize=15)
+plt.suptitle("Step 7a. ROIs with SNR > Cutoff",fontsize=15)
 plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
 plt.show()
-plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
+plt.savefig("Step7a_ROIs_with_SNR_Greater_than_Cutoff.jpg")
+
+```
+```{python}
+
+################## Keep ROIS > Amp Cutoff ##################################
+############################################################################
+
+pixel_amp_data = r.pixel_amp_data
+Ampcutoff = r.Ampcutoff
+
+roi_amp_averages = numpy.zeros((width,height))
+# roi_amp_averages = roi_averages
+
+for roi_group_index in numpy.unique(cluster_results):
+  location_index = (cluster_results == roi_group_index)
+  amp_data_for_group = pixel_amp_data * location_index
+  average = amp_data_for_group[amp_data_for_group != 0].mean()
+  if average > Ampcutoff:
+    print (average)
+  else:
+    print ("Below Amp threshold.")
+  roi_amp_averages += (cluster_results == roi_group_index) * average
+
+r.roi_amp_average = roi_amp_averages
+
+unique, counts = numpy.unique(roi_amp_averages, return_counts=True)
+amp_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
+background_amp = max(amp_dict, key=amp_dict.get) #find snr that occurs most often ie background
+roi_amp_averages[roi_amp_averages == background_amp] = 0 #set background to 0
+r.roi_amp_average = roi_amp_averages
+
+roi_amp_averages[roi_amp_averages < Ampcutoff] = 0
+r.roi_amp_average = roi_amp_averages
+r.roi_amp_averages = roi_amp_averages[roi_amp_averages > Ampcutoff]
+
+plt.matshow(roi_amp_averages)
+plt.suptitle("Step 7b. ROIs with Amplitude > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, Amplitude Cutoff: %d" % (mydate,myslice,Ampcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step7b_ROIs_with_Amp_Greater_than_Cutoff.jpg")
+
+roi_keep = numpy.zeros((width,height))
+for i in range(0,width): 
+  for j in range(0,height):
+    if roi_amp_averages[j][i] != 0:
+      roi_keep[j][i] = roi_averages[j][i]
+
+# roi_keep = numpy.multiply(roi_amp_keep,roi_averages)
+
+plt.matshow(roi_keep)
+plt.suptitle("Step 7b. ROIs with SNR and Amplitude > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d, Amp Cutoff: %1.3f" % (mydate,myslice,SNRcutoff,Ampcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step7b_ROIs_with_SNR_and_Amp_Greater_than_Cutoff.jpg")
 
 ```
 
@@ -428,11 +485,11 @@ plt.savefig("Step7_ROIs_with_SNR_Greater_than_Cutoff.jpg")
 for i in range(0,width): #add electrode as new "roi"
   for j in range(0,height):
     if electrode_data[j][i] != 0:
-      roi_averages[j][i] = electrode_cluster
+      roi_keep[j][i] = electrode_cluster
 
-plt.matshow(roi_averages)
+plt.matshow(roi_keep)
 plt.suptitle("Step 8. Final ROIs with Electrode",fontsize=15)
-plt.title("Date: %s, Slice: %s, SNR Cutoff: %1.3f" % (mydate,myslice,SNRcutoff),fontsize=13)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d, Amplitude Cutoff: %1.3f" % (mydate,myslice,SNRcutoff,Ampcutoff),fontsize=13)
 plt.show()
 plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
 
@@ -443,15 +500,15 @@ plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
 ###### Format pixel coordinates of ROIs and electrodes to export to R ######
 ############################################################################
 
-unique_SNR = numpy.unique(roi_averages)
+unique_SNR = numpy.unique(roi_keep)
 unique_SNR = numpy.delete(unique_SNR,0)
 
-roi_averages = numpy.transpose(roi_averages)
+roi_keep = numpy.transpose(roi_keep)
 
 pixel_coords_for_all_rois = []
 total_pixels_in_all_rois = 0
 for roi in range(0,len(unique_SNR)):
-  pixel_coords_for_roi = list(zip(*numpy.where(roi_averages == unique_SNR[roi])))
+  pixel_coords_for_roi = list(zip(*numpy.where(roi_keep == unique_SNR[roi])))
   total_pixels_in_all_rois += len(pixel_coords_for_roi)
   pixel_coords_to_import = []
   for coord_pair in pixel_coords_for_roi:
@@ -523,18 +580,3 @@ for (i in 2:length(datfilebreakpoints)) {
 }
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
