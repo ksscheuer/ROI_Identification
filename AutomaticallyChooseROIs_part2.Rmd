@@ -10,12 +10,12 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-06-26_SS_FXR1/01-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-11-18_SS_FXR1/08-01")
 
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "01"
-mydate <- "2019-06-26"
+myslice <- "08"
+mydate <- "2019-11-18"
 SNRcutoff <- 4
 Ampcutoff <- 0.001
 

@@ -3,8 +3,8 @@
 ############################################################################
 
 maxkclust <- 10 #maximum number of potential clusters
-myslice <- "04-01"
-mydate <- "2019-06-26"
+myslice <- "03-01"
+mydate <- "2019-07-08"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
 ############# Load libraries, load data, and make df to fill ###############
@@ -103,7 +103,7 @@ for (i in 1:nrow(myfiles)) {
 for (i in 1:(ncol(myfiles_SNRcutoff)-3)) {
   ggplot(myfiles_SNRcutoff,aes(x=X,y=Y)) +
     geom_tile(aes(fill=myfiles_SNRcutoff[,3+i])) +
-    labs(title=paste(dateSlice)) +
+    labs(title=paste(dateSlice," SNR")) +
     theme(
       axis.title.y = element_blank(),
       axis.title.x = element_blank(),
@@ -122,7 +122,7 @@ for (i in 1:(ncol(myfiles_SNRcutoff)-3)) {
 
 ggplot(myfiles,aes(x=X,y=Y)) +
   geom_tile(aes(fill=myfiles$AvgGps)) +
-  labs(title=paste(dateSlice)) +
+  labs(title=paste(dateSlice, " Average SNR")) +
   theme(
     axis.title.y = element_blank(),
     axis.title.x = element_blank(),
@@ -154,31 +154,16 @@ for (i in 1:length(ampfilelist)) {
   ampfiles[,i+3] <- ampfilelist[[i]][,2]
 }
 
-# ampfiles_SNRcutoff <- ampfiles[,c(1:(ncol(ampfiles)-2))]
-# for (i in 1:length(ampfilenames)) {
-#   for (j in 1:nrow(ampfiles_SNRcutoff)) {
-#     if (ampfiles_SNRcutoff[j,3+i] <= SNRcutoff) {
-#       ampfiles_SNRcutoff[j,3+i] <- NA
-#     }
-#   }
-# }
-
 ampfiles$Avg <- rowMeans(ampfiles[,4:(ncol(ampfiles)-2)])
 ampfiles$AvgGps <- ampfiles$Avg
-# for (i in 1:nrow(ampfiles)) {
-#   if (ampfiles$Avg[i] <= SNRcutoff) {
-#     ampfiles$AvgGps[i] <- NA
-#   }
-# }
 
 ######################### Plot amplitude data ##############################
 ############################################################################
 
 for (i in 1:(ncol(ampfiles)-5)) {
-# for (i in 1:(ncol(ampfiles)-3)) {
   ggplot(ampfiles,aes(x=X,y=Y)) +
     geom_tile(aes(fill=ampfiles[,3+i])) +
-    labs(title=paste(dateSlice)) +
+    labs(title=paste(dateSlice, " Amplitude")) +
     theme(
       axis.title.y = element_blank(),
       axis.title.x = element_blank(),
@@ -197,7 +182,7 @@ for (i in 1:(ncol(ampfiles)-5)) {
 
 ggplot(ampfiles,aes(x=X,y=Y)) +
   geom_tile(aes(fill=ampfiles$AvgGps)) +
-  labs(title=paste(dateSlice)) +
+  labs(title=paste(dateSlice, " Average Amplitude")) +
   theme(
     axis.title.y = element_blank(),
     axis.title.x = element_blank(),
