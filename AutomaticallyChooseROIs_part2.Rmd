@@ -10,7 +10,7 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-11-18_SS_FXR1/08-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-06-26_SS_FXR1/01-01")
 
 k <- 2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
@@ -18,6 +18,8 @@ myslice <- "08"
 mydate <- "2019-11-18"
 SNRcutoff <- 4
 Ampcutoff <- 0.001
+rois_per_smaller_dat_file <- 5
+rois_per_dat_file <- 30
 
 n_ROIs_highest_SNR <- 15
 height = 80 #number of pixels in y axis
@@ -554,12 +556,12 @@ dat_file_electrode[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==0)))),
 write.table(dat_file_electrode,"electrode.dat",row.names = FALSE)
 
 final_rois_no_electrode <- final_rois[-which(final_rois$ROI_ID==0),]
-datfilebreakpoints <- c(seq(1,nROIs-1,by=5),nROIs)
+datfilebreakpoints <- c(seq(1,nROIs-1,by=rois_per_dat_file),nROIs)
 for (i in 2:length(datfilebreakpoints)) {
-  if ((nROIs-1)%%5!=0 & i==length(datfilebreakpoints)) {
-    tracesinfile <- (nROIs-1)%%5 # remainder so that if number ROIs not divisible by 5, final dat file ends with final ROI
+  if ((nROIs-1)%%rois_per_dat_file!=0 & i==length(datfilebreakpoints)) {
+    tracesinfile <- (nROIs-1)%%rois_per_dat_file # remainder so that if number ROIs not divisible by rois_per_dat_file, final dat file ends with final ROI
   } else {
-    tracesinfile <- 5
+    tracesinfile <- rois_per_dat_file
   }
   roiindexesinthisdatfile <- datfilebreakpoints[i-1]:(datfilebreakpoints[i]-1)
   datfile <- data.frame(matrix(ncol=1,nrow=((tracesinfile*3+1)+length(unlist(final_rois_no_electrode$Pixel_ID[roiindexesinthisdatfile])))))
