@@ -1,0 +1,582 @@
+
+```{r setup, include = FALSE}
+
+################# Set working directory and initial values #################
+############################################################################
+
+### click "session" -> "set working directory" -> "choose directory" OR
+### control+shift+H, navigate to correct folder, copy working directory
+### from console below to text in quotes
+
+knitr::knit_engines$set(python = reticulate::eng_python)
+# knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-09-20_SS_FXR1/05-01")
+
+k <-  2 #number of clusters chosen by hand based on silhouette plot
+ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
+myslice <- "05"
+mydate <- "2019-09-20"
+SNRcutoff <- 4
+Ampcutoff <- 0.001
+rois_per_dat_file <- 5 #60 makes it crash but 50 works
+
+height = 80 #number of pixels in y axis
+width = 80 #number of pixels in x axis
+
+```
+
+``` {r}
+
+#################### Read in data and load libraries #######################
+############################################################################
+
+suppressMessages(suppressWarnings(library(ggplot2)))
+suppressMessages(suppressWarnings(library(dendextend)))
+suppressMessages(suppressWarnings(library(plyr)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(reshape2)))
+suppressMessages(suppressWarnings(library(tidyr)))
+suppressMessages(suppressWarnings(library(reticulate)))
+
+myclusterdata <- read.csv("EachPixel_Cluster.csv",check.names = FALSE)
+myclustAvgGps_df_sc <- as.data.frame(myclusterdata$AvgGps)
+
+myfiles <- read.csv("EachPixel_SNR_Data.csv",check.names = FALSE)
+ampfiles <- read.csv("EachPixel_Amp_Data.csv",check.names = FALSE)
+
+electrodepixels <- read.csv("electrodepixels.csv",header=FALSE)
+electrodepixels <- electrodepixels+1 #photoZ starts counting with 0
+
+############## Hierarchical clustering using chosen k ######################
+############################################################################
+
+dist_mat <- dist(myclustAvgGps_df_sc,method="euclidean")
+hclust_avg <- hclust(dist_mat,method="average")
+cut_avg <- cutree(hclust_avg,k=k)
+
+avg_dend_obj <- as.dendrogram(hclust_avg)
+avg_col_dend <- color_branches(avg_dend_obj,h=k)
+
+myclusterdata_df_cl <- mutate(myclusterdata, cluster = cut_avg)
+
+myfiles_df_cl <- data.frame(matrix(ncol=ncol(myfiles)+1,
+                                   nrow=nrow(myfiles)))
+colnames(myfiles_df_cl) <- c(colnames(myfiles),"Cluster")
+myfiles_df_cl[,1:ncol(myfiles)] <- myfiles[,1:ncol(myfiles)]
+for (i in 1:nrow(myclusterdata_df_cl)) {
+  myclusterpixelid <- which(myfiles_df_cl$PixelID==myclusterdata_df_cl$PixelID[i])
+  myfiles_df_cl$Cluster[myclusterpixelid] <- myclusterdata_df_cl$cluster[i]
+}
+
+clusteraverages_all <- data.frame(matrix(nrow=k,ncol=2))
+colnames(clusteraverages_all) <- c("Avg","SD")
+rownames(clusteraverages_all) <- paste(rep("Clust"),1:k,sep="")
+
+clusteraverages <- data.frame(matrix(ncol=2,nrow=k))
+colnames(clusteraverages) <- c("k","StN_Avg")
+clusteraverages$k <- seq(1:k)
+for (i in 1:k) {
+  allcolmeans <- colMeans(myfiles_df_cl[which(myfiles_df_cl$Cluster==i),])
+  myclustersd <- sd(as.matrix(myfiles_df_cl[which(myfiles_df_cl$Cluster==i),4:6]))
+  clusteraverages$StN_Avg[i] <- allcolmeans[which(colnames(myfiles_df_cl)=="AvgGps")]
+  clusteraverages_all$Avg[i] <- clusteraverages$StN_Avg[i]
+  clusteraverages_all$SD[i] <- myclustersd
+}
+
+```
+
+``` {r fig.width=7, fig.height=6}
+######################### Plot clusters ####################################
+############################################################################
+
+ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
+  geom_tile(aes(fill=myfiles_df_cl$Cluster),color="gray") +
+  labs(title=paste("Step 2. Clusters"),subtitle=paste("Date: ",mydate,", Slice: ",myslice,", Clusters: ",k,sep=""), fill="SNR Avg +/- SD") +
+  theme(
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(hjust=0.5),
+    plot.subtitle = element_text(hjust=0.5)
+    # legend.position = "none"
+  ) +
+  guides(fill = guide_legend(keyheight = 0.9)) +
+  scale_y_reverse() +
+  scale_fill_gradientn(breaks=seq(1:k),
+                       labels=c(paste(round(clusteraverages_all$Avg,3),"+/-",round(clusteraverages_all$SD,3))),
+                       colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
+  )
+
+ggsave("Step2_Clusters.jpg",height=6,width=7.5)
+
+```
+
+``` {r}
+############ Convert data to height x width representation #################
+############################################################################
+
+pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
+pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
+pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
+pixel_amp_data <- t(matrix(ampfiles$Avg, ncol=width, nrow=height))
+
+myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
+for (i in 1:nrow(electrodepixels)) {
+  myfiles_df_cl_with_electrode$Electrode[which(myfiles_df_cl_with_electrode$PixelID==electrodepixels[i,1])] <- 1
+}
+electrode_data <- t(matrix(myfiles_df_cl_with_electrode$Electrode, ncol=width, nrow=height))
+
+electrode_x_min <- min(myfiles_df_cl_with_electrode$X[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_tip_x <- max(myfiles_df_cl_with_electrode$X[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_y_min <- min(myfiles_df_cl_with_electrode$Y[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_y_max <- max(myfiles_df_cl_with_electrode$Y[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_tip_y <- (electrode_y_min + electrode_y_max) / 2
+
+```
+
+
+```{python}
+
+############ Identify each potential ROI and bounds for each ROI ###########
+############################################################################
+
+import numpy
+import matplotlib.pyplot as plt
+import pandas
+import scipy
+import collections
+from collections import Counter
+pixel_cluster_data = r.pixel_cluster_data
+width = len(pixel_cluster_data)
+height = len(pixel_cluster_data[0])
+mydate = r.mydate
+myslice = r.myslice
+k = r.k
+ROI_diameter_cutoff = r.ROI_diameter_cutoff
+
+# show cluster map which should be the same as plot above from R
+# plt.matshow(pixel_cluster_data)
+# plt.show()
+
+cluster_results = numpy.zeros((width,height))
+rlimit=5000
+
+import sys
+sys.setrecursionlimit(rlimit+1)
+
+def combine_bound(bound1, bound2):
+  if bound2 is None:
+    return bound1
+  if bound1 is None:
+    return bound2
+  result = [
+    min(bound1[0],bound2[0]),
+    max(bound1[1],bound2[1]),
+    min(bound1[2],bound2[2]),
+    max(bound1[3],bound2[3])
+  ]
+  return result
+
+def check_cell(x, y, group_index, color, rdepth):
+  cell_value = pixel_cluster_data[y][x]
+  if (cell_value != 0 and 
+      cluster_results[y][x] == 0 and 
+      (color == 0 or cell_value == color)):
+    if(rdepth >= rlimit):
+      print ("HIT RECURSION LIMIT OF {} AT CELL {} {} RESULTS INACCURATE.".format(rlimit, x,y))
+      return None
+    rdepth += 1
+    cluster_results[y][x] = group_index
+    my_bound = [x,x,y,y]
+    xleft = max(0, x-1) #x coordinate of pixel to L
+    xright = min(width-1, x+1) #x coordinate of pixel to R
+    yup = max(0, y-1) #y coordinate of pixel down in number / up in direction"
+    ydown = min(height-1, y+1) #y coordinate of pixel up in number / down in direction"
+    child_bound = check_cell(xright,y,group_index,cell_value,rdepth)
+    my_bound = combine_bound(my_bound,child_bound)
+    child_bound = check_cell(xleft,y,group_index,cell_value,rdepth)
+    my_bound = combine_bound(my_bound,child_bound)
+    child_bound = check_cell(x,ydown,group_index,cell_value,rdepth)
+    my_bound = combine_bound(my_bound,child_bound)
+    child_bound = check_cell(x,yup,group_index,cell_value,rdepth)
+    my_bound = combine_bound(my_bound,child_bound)
+    return my_bound
+  else:
+    return None
+
+group_index = 1 #0 = never visited, 1 = first roi, 2 = second roi, etc
+group_bound = []
+
+for i in range(0,width):
+  for j in range(0,height):
+    result = check_cell(i, j, group_index, 0, 0)
+    #print ("RETURN!", group_index)
+    if result is not None:
+      group_index += 1
+      group_bound.append(result)
+      
+# to better see some clusters, decrease vmin and vmax
+# plt.matshow(cluster_results,vmin=0,vmax=19)
+# plt.show()
+
+plt.matshow(cluster_results)
+plt.suptitle("Step 3. All Potential ROIs",fontsize=15)
+plt.title("Date: %s, Slice: %s, Clusters: %d" % (mydate,myslice,k),fontsize=13)
+plt.show()
+plt.savefig("Step3_All_Potential_ROIs.jpg")
+r.cluster_results = cluster_results
+
+```
+
+```{python}
+
+############# Remove ROIs with diameter greater than cutoff ################
+############################################################################
+
+bound_limit = r.ROI_diameter_cutoff
+
+for i in range(0,len(group_bound)):
+  group = group_bound[i]
+  x_big = (group[1] - group[0]) > (bound_limit-1)
+  y_big = (group[3] - group[2]) > (bound_limit-1)
+  if x_big or y_big:
+    cluster_results[cluster_results == (i+1)] = 0 #0 vs 1 index mismatch ie counting from 0 here but index from 1 above
+
+r.cluster_results = cluster_results
+
+# to see all ROIs, where each ROI is its own color
+# plt.matshow(cluster_results,vmin=0,vmax=19)
+
+plt.matshow(cluster_results)
+plt.suptitle("Step 4. ROIs with Diameter <= Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
+plt.show()
+plt.savefig("Step4_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
+
+################ Separate remaining ROIs based on cluster ##################
+############################################################################
+
+pixel_cluster_data = pixel_cluster_data * (cluster_results > 0)
+
+# plt.matshow(pixel_cluster_data)
+# plt.title("Clustered ROIs with Diam <= Cutoff - Date: %s, Slice: %s, Clusters: %d, Diam: %d" % (mydate,myslice,k,ROI_diameter_cutoff),fontsize=10)
+# plt.show()
+
+```
+
+
+```{python}
+
+############################ Add electrode #################
+############################################################
+
+electrode_data = r.electrode_data #1 if pixel in electrode, 0 if not
+
+# to see just electrode plotted
+# plt.matshow(electrode_data)
+# plt.show()
+
+electrode_data = electrode_data * (max(numpy.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
+
+electrode_cluster = max(numpy.unique(pixel_cluster_data))+1
+
+pixel_cluster_data_with_electrode = pixel_cluster_data
+
+for i in range(0,width): #add electrode as new "roi"
+  for j in range(0,height):
+    if electrode_data[j][i] != 0:
+      cluster_results[j][i] = electrode_data[j][i]
+      pixel_cluster_data_with_electrode[j][i] = electrode_cluster
+
+r.cluster_results = cluster_results
+
+plt.matshow(pixel_cluster_data)
+plt.suptitle("Step 5. Electrode and ROIs with Diameter <= Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
+plt.show()
+plt.savefig("Step5_Electrode_and_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
+
+```
+
+``` {python}
+
+##################### Remove ROIs touching electrode #######################
+############################################################################
+
+electrode_x_min = r.electrode_x_min-1
+electrode_x_max = r.electrode_tip_x-1
+electrode_y_max = r.electrode_y_max-1
+electrode_y_min = r.electrode_y_min-1
+print (electrode_x_min,electrode_x_max,electrode_y_min,electrode_y_max)
+
+rois_touching_electrode = []
+for i in range(0,height):
+  for j in range(0,width):
+    cell_value = cluster_results[j][i]
+    if cell_value!=0 and i>(electrode_x_min-2) and i<(electrode_x_max+2) and j>(electrode_y_min-2) and j<(electrode_y_max+2):
+      rois_touching_electrode.append(cell_value)
+
+rois_touching_electrode = numpy.unique(rois_touching_electrode)
+print (rois_touching_electrode)
+
+for i in range(0,width):
+  for j in range(0,height):
+    cell_value = cluster_results[j][i]
+    if cell_value in rois_touching_electrode:
+      cluster_results[j][i] = 0
+      pixel_cluster_data[j][i] = 0
+
+r.cluster_results = cluster_results
+
+plt.matshow(pixel_cluster_data)
+plt.suptitle("Step 6a. ROIs Not Touching Electrode",fontsize=15)
+plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+plt.show()
+plt.savefig("Step6a_ROIs_not_Touching_Electrode.jpg")
+
+```
+
+```{python}
+
+##################### Remove ROIs that are touching ########################
+############################################################################
+
+visited_cells = numpy.zeros((width,height))
+def check_collisions(x,y,group_index):
+  cell_value = cluster_results[y][x]
+  print ("cell_value",cell_value)
+  if cell_value != 0 and visited_cells[y][x] == 0:
+    visited_cells[y][x] = True
+    if group_index == 0 or cell_value==group_index:
+      xleft = max(0, x-1)
+      xright = min(width-1, x+1)
+      yup = max(0, y-1)
+      ydown = min(height-1, y+1)
+      check_collisions(x,yup,cell_value)
+      check_collisions(xleft,yup,cell_value)
+      check_collisions(xleft,y,cell_value)
+      check_collisions(xleft,ydown,cell_value)
+      check_collisions(x,ydown,cell_value)
+      check_collisions(xright,ydown,cell_value)
+      check_collisions(xright,y,cell_value)
+      check_collisions(xright,yup,cell_value)
+    else:
+      print ("Found collision",group_index,cell_value)
+      cluster_results[cluster_results == group_index] = 0
+      cluster_results[cluster_results == cell_value] = 0
+
+for i in range(0,width):
+  for j in range(0,height):
+    result = check_collisions(i,j,0)
+
+r.cluster_results = cluster_results
+
+# to better see some clusters, decrease vmin and vmax
+# plt.matshow(cluster_results,vmin=0,vmax=19)
+# plt.show()
+
+plt.matshow(cluster_results)
+plt.suptitle("Step 6b. ROIs Not Touching",fontsize=15)
+plt.title("Date: %s, Slice: %s" % (mydate,myslice),fontsize=13)
+plt.show()
+plt.savefig("Step6b_ROIs_not_Touching.jpg")
+
+```
+
+```{python}
+
+################## Keep ROIS > SNR Cutoff ##################################
+############################################################################
+
+pixel_sn_data = r.pixel_sn_data
+SNRcutoff = r.SNRcutoff
+
+roi_averages = numpy.zeros((width,height))
+
+for roi_group_index in numpy.unique(cluster_results):
+  location_index = (cluster_results == roi_group_index)
+  sn_data_for_group = pixel_sn_data * location_index
+  average = sn_data_for_group[sn_data_for_group != 0].mean()
+  if average > SNRcutoff:
+    print (average)
+  else:
+    print ("Below SNR threshold.")
+  roi_averages += (cluster_results == roi_group_index) * average
+
+r.roi_average = roi_averages
+
+unique, counts = numpy.unique(roi_averages, return_counts=True)
+snr_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
+background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most often ie background
+roi_averages[roi_averages == background_snr] = 0 #set background to 0
+r.roi_average = roi_averages
+
+roi_averages[roi_averages < SNRcutoff] = 0
+r.roi_average = roi_averages
+r.roi_averages = roi_averages[roi_averages > SNRcutoff]
+
+plt.matshow(roi_averages)
+plt.suptitle("Step 7a. ROIs with SNR > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d" % (mydate,myslice,SNRcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step7a_ROIs_with_SNR_Greater_than_Cutoff.jpg")
+
+```
+```{python}
+
+################## Keep ROIS > Amp Cutoff ##################################
+############################################################################
+
+pixel_amp_data = r.pixel_amp_data
+Ampcutoff = r.Ampcutoff
+
+roi_amp_averages = numpy.zeros((width,height))
+# roi_amp_averages = roi_averages
+
+for roi_group_index in numpy.unique(cluster_results):
+  location_index = (cluster_results == roi_group_index)
+  amp_data_for_group = pixel_amp_data * location_index
+  average = amp_data_for_group[amp_data_for_group != 0].mean()
+  if average > Ampcutoff:
+    print (average)
+  else:
+    print ("Below Amp threshold.")
+  roi_amp_averages += (cluster_results == roi_group_index) * average
+
+r.roi_amp_average = roi_amp_averages
+
+unique, counts = numpy.unique(roi_amp_averages, return_counts=True)
+amp_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
+background_amp = max(amp_dict, key=amp_dict.get) #find snr that occurs most often ie background
+roi_amp_averages[roi_amp_averages == background_amp] = 0 #set background to 0
+r.roi_amp_average = roi_amp_averages
+
+roi_amp_averages[roi_amp_averages < Ampcutoff] = 0
+r.roi_amp_average = roi_amp_averages
+r.roi_amp_averages = roi_amp_averages[roi_amp_averages > Ampcutoff]
+
+plt.matshow(roi_amp_averages)
+plt.suptitle("Step 7b. ROIs with Amplitude > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, Amplitude Cutoff: %d" % (mydate,myslice,Ampcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step7b_ROIs_with_Amp_Greater_than_Cutoff.jpg")
+
+roi_keep = numpy.zeros((width,height))
+for i in range(0,width): 
+  for j in range(0,height):
+    if roi_amp_averages[j][i] != 0:
+      roi_keep[j][i] = roi_averages[j][i]
+
+# roi_keep = numpy.multiply(roi_amp_keep,roi_averages)
+
+plt.matshow(roi_keep)
+plt.suptitle("Step 7b. ROIs with SNR and Amplitude > Cutoff",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d, Amp Cutoff: %1.3f" % (mydate,myslice,SNRcutoff,Ampcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step7b_ROIs_with_SNR_and_Amp_Greater_than_Cutoff.jpg")
+
+```
+
+```{python}
+
+######################### Replot electrode #################################
+############################################################################
+
+for i in range(0,width): #add electrode as new "roi"
+  for j in range(0,height):
+    if electrode_data[j][i] != 0:
+      roi_keep[j][i] = electrode_cluster
+
+plt.matshow(roi_keep)
+plt.suptitle("Step 8. Final ROIs with Electrode",fontsize=15)
+plt.title("Date: %s, Slice: %s, SNR Cutoff: %d, Amplitude Cutoff: %1.3f" % (mydate,myslice,SNRcutoff,Ampcutoff),fontsize=13)
+plt.show()
+plt.savefig("Step8_Final_ROIs_with_Electrode.jpg")
+
+```
+
+``` {python}
+
+###### Format pixel coordinates of ROIs and electrodes to export to R ######
+############################################################################
+
+unique_SNR = numpy.unique(roi_keep)
+unique_SNR = numpy.delete(unique_SNR,0)
+
+roi_keep = numpy.transpose(roi_keep)
+
+pixel_coords_for_all_rois = []
+total_pixels_in_all_rois = 0
+for roi in range(0,len(unique_SNR)):
+  pixel_coords_for_roi = list(zip(*numpy.where(roi_keep == unique_SNR[roi])))
+  total_pixels_in_all_rois += len(pixel_coords_for_roi)
+  pixel_coords_to_import = []
+  for coord_pair in pixel_coords_for_roi:
+    pixel_coords_to_import.extend([coord_pair,unique_SNR[roi]])
+  pixel_coords_for_all_rois.extend([pixel_coords_to_import])
+
+```
+
+``` {R}
+
+############### Save pixel coordinates of ROIs and electrode ###############
+############################################################################
+
+pixel_coords_for_all_rois <- py$pixel_coords_for_all_rois
+total_pixels_in_all_rois <- py$total_pixels_in_all_rois
+final_rois_from_python <- matrix(unlist(pixel_coords_for_all_rois),nrow = total_pixels_in_all_rois,byrow=TRUE)
+final_rois <- data.frame(matrix(ncol=5,nrow=nrow(final_rois_from_python)))
+colnames(final_rois) <- c("Pixel_ID","X","Y","ROI_ID","SNR")
+final_rois$X <- final_rois_from_python[,1]+1
+final_rois$Y <- final_rois_from_python[,2]+1
+final_rois$SNR <- final_rois_from_python[,3]
+
+for (i in 1:nrow(final_rois)) {
+  all_x <- which(myfiles_df_cl$X==final_rois$X[i])
+  all_y <- which(myfiles_df_cl$Y==final_rois$Y[i])
+  final_rois$Pixel_ID[i] <- intersect(all_x,all_y)
+}
+
+roi_index <- 0
+for (i in 1:length(unique(final_rois$SNR))) {
+  final_rois$ROI_ID[which(final_rois$SNR==unique(final_rois$SNR)[i])] <- roi_index
+  roi_index <- roi_index + 1
+}
+
+nROIs <- max(final_rois$ROI_ID)+1
+dat_file_electrode <- data.frame(matrix(ncol=1,nrow=3*nROIs+1+nrow(final_rois)))
+colnames(dat_file_electrode) <- NULL
+dat_file_electrode[1,1] <- 1
+row_id <- 2
+dat_file_electrode[c(row_id,(row_id+2)),1] <- 0
+dat_file_electrode[(row_id+1),1] <- length(which(final_rois$ROI_ID==0))+1
+dat_file_electrode[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==0)))),1] <- (final_rois$Pixel_ID[which(final_rois$ROI_ID==0)])-1 
+write.table(dat_file_electrode,"electrode.dat",row.names = FALSE)
+
+final_rois_no_electrode <- final_rois[-which(final_rois$ROI_ID==0),]
+datfilebreakpoints <- c(seq(1,nROIs-1,by=rois_per_dat_file),nROIs)
+for (i in 2:length(datfilebreakpoints)) {
+  if ((nROIs-1)%%rois_per_dat_file!=0 & i==length(datfilebreakpoints)) {
+    tracesinfile <- (nROIs-1)%%rois_per_dat_file # remainder so that if number ROIs not divisible by rois_per_dat_file, final dat file ends with final ROI
+  } else {
+    tracesinfile <- rois_per_dat_file
+  }
+  roiindexesinthisdatfile <- datfilebreakpoints[i-1]:(datfilebreakpoints[i]-1)
+  datfile <- data.frame(matrix(ncol=1,nrow=((tracesinfile*3+1)+length(unlist(final_rois_no_electrode$Pixel_ID[roiindexesinthisdatfile])))))
+  colnames(datfile) <- NULL
+  datfile[1,1] <- tracesinfile
+  rowindex <- 2
+  for (j in 1:tracesinfile) {
+    pixelidsinthisroi <- final_rois_no_electrode$Pixel_ID[which(final_rois_no_electrode$ROI_ID==roiindexesinthisdatfile[j])]
+    datfile[rowindex,1]  <- j-1
+    datfile[rowindex+1,1] <- length(pixelidsinthisroi)+1
+    datfile[rowindex+2,1]  <- j-1
+    datfile[(rowindex+3):(rowindex+3+length(pixelidsinthisroi)-1),1] <- pixelidsinthisroi-1
+    rowindex <- rowindex+3+length(pixelidsinthisroi)
+  write.table(datfile,
+            paste("ROIs",sprintf("%02d", min(roiindexesinthisdatfile)),"to",sprintf("%02d", max(roiindexesinthisdatfile)),".dat",sep=""),
+            row.names = FALSE)
+  }
+}
+
+```
