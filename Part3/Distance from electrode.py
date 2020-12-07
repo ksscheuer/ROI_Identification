@@ -47,26 +47,39 @@ nROIs = ROIs_dat[0][0]
 ROI_row_index_breaks = []
 for ROI_Id in range(0,nROIs): #counts from 0 to 1-nROIS
     ROI_Id_row_index_choices = ROIs_dat.index[ROIs_dat[0] == ROI_Id] + 1
-    if ROI_Id == 2:  # if second ROI and has 1 pixel then three lines in a row will be 2 so choose first and third line
-        choice_diff_list = numpy.diff(ROI_Id_row_index_choices)
-        # print(choice_diff_list)
-        if 1 in choice_diff_list: #if ROI 2 has 3 pixels in it
-            val_index_list = []
-            for val in range(0, len(choice_diff_list)):
-                # print(val,val!= len(choice_diff_list))
-                if choice_diff_list[val] != len(choice_diff_list) + 1 and choice_diff_list[val] == 1:
-                    val_index_list.append(val)
-            n_index_diff = val_index_list[-1]
-                # nth diff is between some row index and a second row index where that
-                # first row index is the target row index
-            ROI_Id_row_index = ROI_Id_row_index_choices[n_index_diff]+1
-        else:
-            for choice in range(len(ROI_Id_row_index_choices) - 1):
-                # get second instance of ROI_Id which is one line before PixelIDs
-                if ROI_Id_row_index_choices[choice + 1] - ROI_Id_row_index_choices[choice] == 2:
-                    ROI_Id_row_index = ROI_Id_row_index_choices[choice + 1]
-        # print(ROI_Id_row_index)
+    # print(ROI_Id_row_index_choices)
+    choice_diff_list = numpy.diff(ROI_Id_row_index_choices)
+    if 1 in choice_diff_list: #if any ROI has ROI_Id + 1 pixels (so three lines in a row have ROI_Id)
+        val_index_list = []
+        for val in range(0, len(choice_diff_list)):
+            # print(val,val!= len(choice_diff_list))
+            if choice_diff_list[val] != len(choice_diff_list) + 1 and choice_diff_list[val] == 1:
+                val_index_list.append(val)
+        n_index_diff = val_index_list[-1]
+        # nth diff is between some row index and a second row index where that
+        # first row index is the target row index
+        ROI_Id_row_index = ROI_Id_row_index_choices[n_index_diff] + 1
         ROI_row_index_breaks.append(ROI_Id_row_index)
+    # if ROI_Id == 2:  # if second ROI and has 1 pixel then three lines in a row will be 2 so choose first and third line
+    #     choice_diff_list = numpy.diff(ROI_Id_row_index_choices)
+        # print(choice_diff_list)
+        # if 1 in choice_diff_list: #if ROI 2 has 3 pixels in it
+            # val_index_list = []
+            # for val in range(0, len(choice_diff_list)):
+            #     # print(val,val!= len(choice_diff_list))
+            #     if choice_diff_list[val] != len(choice_diff_list) + 1 and choice_diff_list[val] == 1:
+            #         val_index_list.append(val)
+            # n_index_diff = val_index_list[-1]
+            #     # nth diff is between some row index and a second row index where that
+            #     # first row index is the target row index
+            # ROI_Id_row_index = ROI_Id_row_index_choices[n_index_diff]+1
+        # else:
+        #     for choice in range(len(ROI_Id_row_index_choices) - 1):
+        #         # get second instance of ROI_Id which is one line before PixelIDs
+        #         if ROI_Id_row_index_choices[choice + 1] - ROI_Id_row_index_choices[choice] == 2:
+        #             ROI_Id_row_index = ROI_Id_row_index_choices[choice + 1]
+        # # print(ROI_Id_row_index)
+        # ROI_row_index_breaks.append(ROI_Id_row_index)
     else:
         for choice in range(len(ROI_Id_row_index_choices) - 1):
             # get second instance of ROI_Id which is one line before PixelIDs
