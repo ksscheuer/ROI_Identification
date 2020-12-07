@@ -3,8 +3,8 @@
 ############################################################################
 
 maxkclust <- 10 #maximum number of potential clusters
-myslice <- "05-01"
-mydate <- "2020-09-11"
+myslice <- "04-01"
+mydate <- "2020-07-16"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
 ############# Load libraries, load data, and make df to fill ###############

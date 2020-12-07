@@ -10,15 +10,15 @@
 
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/Neuroplex_data/Analyzed_with_PhotoZ/Step1_ROIs/2019-09-20_SS_FXR1/05-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-18_ACC_PV_Run/02-01")
 
 k <-  2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "05"
-mydate <- "2019-09-20"
+myslice <- "02"
+mydate <- "2020-07-18"
 SNRcutoff <- 4
 Ampcutoff <- 0.001
-rois_per_dat_file <- 5 #60 makes it crash but 50 works
+rois_per_dat_file <- 50 #60 makes it crash but 50 works
 
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
@@ -537,9 +537,15 @@ for (i in 1:nrow(final_rois)) {
   final_rois$Pixel_ID[i] <- intersect(all_x,all_y)
 }
 
+
+############## TEST BELOW ##################
+
 roi_index <- 0
-for (i in 1:length(unique(final_rois$SNR))) {
-  final_rois$ROI_ID[which(final_rois$SNR==unique(final_rois$SNR)[i])] <- roi_index
+final_rois$ROI_ID[which(final_rois$SNR==k+1)] <- roi_index
+roi_index <- 1
+unique_SNR_no_electrode <- unique(final_rois$SNR)[-which(unique(final_rois$SNR)==k+1)]
+for (i in 1:length(unique_SNR_no_electrode)) {
+  final_rois$ROI_ID[which(final_rois$SNR==unique_SNR_no_electrode[i])] <- roi_index
   roi_index <- roi_index + 1
 }
 
@@ -549,11 +555,33 @@ colnames(dat_file_electrode) <- NULL
 dat_file_electrode[1,1] <- 1
 row_id <- 2
 dat_file_electrode[c(row_id,(row_id+2)),1] <- 0
+
+
+# roi_index <- 0
+# for (i in 1:length(unique(final_rois$SNR))) {
+#   final_rois$ROI_ID[which(final_rois$SNR==unique(final_rois$SNR)[i])] <- roi_index
+#   roi_index <- roi_index + 1
+# }
+# 
+# nROIs <- max(final_rois$ROI_ID)+1
+# dat_file_electrode <- data.frame(matrix(ncol=1,nrow=3*nROIs+1+nrow(final_rois)))
+# colnames(dat_file_electrode) <- NULL
+# dat_file_electrode[1,1] <- 1
+# row_id <- 2
+# dat_file_electrode[c(row_id,(row_id+2)),1] <- 0
+
+# dat_file_electrode[(row_id+1),1] <- length(which(final_rois$SNR==k+1))+1
 dat_file_electrode[(row_id+1),1] <- length(which(final_rois$ROI_ID==0))+1
-dat_file_electrode[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==0)))),1] <- (final_rois$Pixel_ID[which(final_rois$ROI_ID==0)])-1 
+# dat_file_electrode[c((row_id+3):(row_id+2+length(which(final_rois$SNR==k+1)))),1] <- (final_rois$Pixel_ID[which(final_rois$SNR==k+1)])-1 
+dat_file_electrode[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==0)))),1] <- (final_rois$Pixel_ID[which(final_rois$ROI_ID==0)])-1
 write.table(dat_file_electrode,"electrode.dat",row.names = FALSE)
 
 final_rois_no_electrode <- final_rois[-which(final_rois$ROI_ID==0),]
+# final_rois_no_electrode <- final_rois[-which(final_rois$SNR==k+1),]
+
+########### END TEST #########################
+
+
 datfilebreakpoints <- c(seq(1,nROIs-1,by=rois_per_dat_file),nROIs)
 for (i in 2:length(datfilebreakpoints)) {
   if ((nROIs-1)%%rois_per_dat_file!=0 & i==length(datfilebreakpoints)) {
