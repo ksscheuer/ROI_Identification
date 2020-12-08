@@ -23,7 +23,7 @@ electrode_pixelID_to_coords_max_xcoord = electrode_pixelID_to_coords.loc[electro
 avg_ycoord = sum(electrode_pixelID_to_coords_max_xcoord)/len(electrode_pixelID_to_coords_max_xcoord)
 electrode_tip_xcoord = max_xcoord
 electrode_tip_ycoord = avg_ycoord
-
+print(electrode_tip_xcoord,electrode_tip_ycoord)
 
 # for dirName, subdirList, fileList in os.walk(".",topdown=False):
 #     # print(dirName)
@@ -40,7 +40,7 @@ electrode_tip_ycoord = avg_ycoord
 
 
 ### Find coords for each ROI ###
-ROIs_dat = pd.read_csv('ROIs01to16.dat',header=None)
+ROIs_dat = pd.read_csv('ROIs01to10.dat',header=None)
 nROIs = ROIs_dat[0][0]
 # print(nROIs)
 
@@ -86,7 +86,7 @@ for ROI_Id in range(0,nROIs): #counts from 0 to 1-nROIS
             if ROI_Id_row_index_choices[choice + 1] - ROI_Id_row_index_choices[choice] == 2:
                 ROI_Id_row_index = ROI_Id_row_index_choices[choice + 1]
         ROI_row_index_breaks.append(ROI_Id_row_index)
-print(ROI_row_index_breaks)
+# print(ROI_row_index_breaks)
 
 #         choice_diff_list = numpy.diff(ROI_Id_row_index_choices)
 #         # print(choice_diff_list)
@@ -107,31 +107,66 @@ print(ROI_row_index_breaks)
 #         ROI_row_index_breaks.append(ROI_Id_row_index)
 # print(ROI_row_index_breaks)
 
+ROI_distances_list = []
+for ROI_Id in range(0,nROIs):
+    if ROI_Id == nROIs-1: # if last ROI in list
+        ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id], len(ROIs_dat))]
+        print(ROI_pixelIds)
+    else:
+        ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id],ROI_row_index_breaks[ROI_Id+1]-3)]
+    # print(ROI_pixelIds)
+    ROI_xdistance_list = []
+    ROI_ydistance_list = []
+    ROI_euc_distance_list = []
+    for pixel in ROI_pixelIds:
+        # print(pixel)
+        pixel_xcoord = pixelID_to_coords.iloc[pixel][:].loc[:]['XCoord']
+        pixel_xdistance = abs(pixel_xcoord - electrode_tip_xcoord)
+        ROI_xdistance_list.append(pixel_xdistance)
+        pixel_ycoord = pixelID_to_coords.iloc[pixel][:].loc[:]['YCoord']
+        pixel_ydistance = abs(pixel_ycoord - electrode_tip_ycoord)
+        ROI_ydistance_list.append(pixel_ydistance)
+        pixel_euc_distance = math.sqrt(pixel_xdistance**2 + pixel_ydistance**2)
+        ROI_euc_distance_list.append(pixel_euc_distance)
+    print(ROI_xdistance_list,ROI_ydistance_list)
+    ROI_xdistance = sum(ROI_xdistance_list) / len(ROI_xdistance_list)
+    ROI_ydistance = sum(ROI_ydistance_list) / len(ROI_ydistance_list)
+    ROI_euc_distance = sum(ROI_euc_distance_list) / len(ROI_euc_distance_list)
+    ROI_distances_list.append([ROI_Id+1,ROI_xdistance,ROI_ydistance,ROI_euc_distance])
+ROI_distances = pd.DataFrame(ROI_distances_list,columns = ['ROI_Id','X_distance','Y_distance','Euc_distance'])
+print(ROI_distances)
+# ROI_distances.to_csv('ROI_distances.csv', index=False)
+
+
+
+
+
 # ROI_distances_list = []
-# for ROI_Id in range(0,nROIs):
-#     if ROI_Id == nROIs-1: # if last ROI in list
-#         ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id], len(ROIs_dat))]
-#         # print(ROI_pixelIds)
-#     else:
-#         ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id],ROI_row_index_breaks[ROI_Id+1]-3)]
-#     # print(ROI_pixelIds)
-#     ROI_xdistance_list = []
-#     ROI_ydistance_list = []
-#     ROI_euc_distance_list = []
-#     for pixel in ROI_pixelIds:
-#         # print(pixel)
-#         pixel_xcoord = pixelID_to_coords.iloc[pixel][:].loc[:]['XCoord']
-#         pixel_xdistance = abs(pixel_xcoord - electrode_tip_xcoord)
-#         ROI_xdistance_list.append(pixel_xdistance)
-#         pixel_ycoord = pixelID_to_coords.iloc[pixel][:].loc[:]['YCoord']
-#         pixel_ydistance = abs(pixel_ycoord - electrode_tip_ycoord)
-#         ROI_ydistance_list.append(pixel_ydistance)
-#         pixel_euc_distance = math.sqrt(pixel_xdistance**2 + pixel_ydistance**2)
-#         ROI_euc_distance_list.append(pixel_euc_distance)
-#     ROI_xdistance = sum(ROI_xdistance_list) / len(ROI_xdistance_list)
-#     ROI_ydistance = sum(ROI_ydistance_list) / len(ROI_ydistance_list)
-#     ROI_euc_distance = sum(ROI_euc_distance_list) / len(ROI_euc_distance_list)
-#     ROI_distances_list.append([ROI_Id+1,ROI_xdistance,ROI_ydistance,ROI_euc_distance])
+# # for ROI_Id in range(0,nROIs):
+# ROI_Id = 0
+# if ROI_Id == nROIs-1: # if last ROI in list
+#     ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id], len(ROIs_dat))]
+#     print(ROI_pixelIds)
+# else:
+#     ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id],ROI_row_index_breaks[ROI_Id+1]-3)]
+# print(ROI_pixelIds)
+# ROI_xdistance_list = []
+# ROI_ydistance_list = []
+# ROI_euc_distance_list = []
+# for pixel in ROI_pixelIds:
+#     # print(pixel)
+#     pixel_xcoord = pixelID_to_coords.iloc[pixel][:].loc[:]['XCoord']
+#     pixel_xdistance = abs(pixel_xcoord - electrode_tip_xcoord)
+#     ROI_xdistance_list.append(pixel_xdistance)
+#     pixel_ycoord = pixelID_to_coords.iloc[pixel][:].loc[:]['YCoord']
+#     pixel_ydistance = abs(pixel_ycoord - electrode_tip_ycoord)
+#     ROI_ydistance_list.append(pixel_ydistance)
+#     pixel_euc_distance = math.sqrt(pixel_xdistance**2 + pixel_ydistance**2)
+#     ROI_euc_distance_list.append(pixel_euc_distance)
+#     print(pixel,pixel_xcoord,pixel_ycoord)
+# print(ROI_xdistance_list,ROI_ydistance_list)
+# ROI_xdistance = sum(ROI_xdistance_list) / len(ROI_xdistance_list)
+# ROI_ydistance = sum(ROI_ydistance_list) / len(ROI_ydistance_list)
+# ROI_euc_distance = sum(ROI_euc_distance_list) / len(ROI_euc_distance_list)
+# ROI_distances_list.append([ROI_Id+1,ROI_xdistance,ROI_ydistance,ROI_euc_distance])
 # ROI_distances = pd.DataFrame(ROI_distances_list,columns = ['ROI_Id','X_distance','Y_distance','Euc_distance'])
-# print(ROI_distances)
-# # ROI_distances.to_csv('ROI_distances.csv', index=False)
