@@ -1,13 +1,3 @@
-print(test)
-
-## remove extra tabs for stim_layer, rli, cx, ipi AND add Slice_Loc_Run  01_01_06
-## add Pulse_index       Stim1 after nPulses, separate stim1 and 2 into two diff folders
-## make sure that _Stim1 is right after Id ie 01-01-06_Stim1
-## add id to metadata for each slice eg Metadata_01-01-06.txt
-## do NOT add date to metadata for animal (file name)
-## remove extra tabs in animal metadata from date, Id, Sex, Tx
-## add Slice_Loc_Run    01-01-06 to metadata in each slice
-
 import os
 import pandas as pd
 
@@ -44,6 +34,7 @@ for folder in keep_folderList:
             current_fileList.append(file)
         #     print(file)
         #     print('break')
+    # print(folder)
     # print(current_fileList)
     amp_file = [file for file in current_fileList if 'Amp' in file]
     amp_name = folder + str(amp_file).replace("['", "\\")
@@ -57,6 +48,12 @@ for folder in keep_folderList:
     halfwidth_file = [file for file in current_fileList if 'Halfwidth' in file]
     halfwidth_name = folder + str(halfwidth_file).replace("['", "\\")
     halfwidth_name = halfwidth_name.replace("']", "")
+    distance_orig_file = [file for file in current_fileList if 'ROI_distances' in file]
+    distance_orig_name = folder + str(distance_orig_file).replace("['", "\\")
+    distance_orig_name = distance_orig_name.replace("']", "")
+    distance_shift_file = [file for file in current_fileList if 'ROI_shifted_distances' in file]
+    distance_shift_name = folder + str(distance_shift_file).replace("['", "\\")
+    distance_shift_name = distance_shift_name.replace("']", "")
     layers_file = [file for file in current_fileList if 'Layers' in file]
     layers_name = folder + str(layers_file).replace("['", "\\")
     layers_name = layers_name.replace("']", "")
@@ -71,6 +68,10 @@ for folder in keep_folderList:
     snr = pd.read_csv(snr_name, sep='\t',names=["ROI_Id","SNR"])
     latency = pd.read_csv(latency_name, sep='\t',names=["ROI_Id","Latency"])
     halfwidth = pd.read_csv(halfwidth_name, sep='\t',names=["ROI_Id","Halfwidth"])
+    # distance_orig = pd.read_csv(distance_orig_name,names=['ROI_Id','X_distance','Y_distance','Euc_distance'])
+    distance_orig = pd.read_csv(distance_orig_name,header=0)
+    # distance_shift = pd.read_csv(distance_shift_name,names=['ROI_Id','X_shifted_distance','Y_shifted_distance','Euc_shifted_distance'])
+    distance_shift = pd.read_csv(distance_shift_name,header=0)
     layers = pd.read_csv(layers_name, sep='\t',names=["ROI_Id","Layers"])
     visual = pd.read_csv(visual_name, sep='\t',names=["ROI_Id","Visual"])
     metadata = pd.read_csv(metadata_name,sep='\t',names=['Variable','Value'])
@@ -92,10 +93,19 @@ for folder in keep_folderList:
             "Amp":amp["Amp"],
             "SNR":snr["SNR"],
             "Latency":latency["Latency"],
-            "Halfwidth":halfwidth["Halfwidth"]}
+            "Halfwidth":halfwidth["Halfwidth"],
+            "Dist_Orig_X":distance_orig['X_distance'],
+            "Dist_Orig_Y":distance_orig['Y_distance'],
+            "Dist_Orig_Euc":distance_orig['Euc_distance'],
+            "Dist_Shift_X":distance_shift['X_shifted_distance'],
+            "Dist_Shift_Y":distance_shift['Y_shifted_distance'],
+            "Dist_Shift_Euc":distance_shift['Euc_shifted_distance'],
+            }
     df = pd.DataFrame(data,columns=["Slice_Loc_Run","Trial_x_Time","Stim_Intensity","Stim_Layer",
                                     "RLI","Cx","n_Pulses","Pulse_index","IPI","ROI_Id","Visual",
-                                    "Layers","Amp","SNR","Latency","Halfwidth"])
+                                    "Layers","Amp","SNR","Latency","Halfwidth",'Dist_Orig_X',
+                                    "Dist_Orig_Y","Dist_Orig_Euc","Dist_Shift_X","Dist_Shift_Y",
+                                    "Dist_Shift_Euc"])
 
     if len(snr.count(axis='columns')) > 75:
         snr_largest = snr.nlargest(n=75,columns='SNR')
@@ -131,7 +141,8 @@ for dirName, subdirList, fileList in os.walk(".",topdown=True):
             current_slice = pd.read_csv(file,names=["Slice_Loc_Run","Trial_x_Time","Stim_Intensity",
                                                     "Stim_Layer","RLI","Cx","n_Pulses","Pulse_index",
                                                     "IPI","ROI_Id","Visual","Layers","Amp","SNR",
-                                                    "Latency","Halfwidth"])
+                                                    "Latency","Halfwidth",'X_dist',"Y_dist","Euc_dist",
+                                                    'X_shift_dist',"Y_shift_dist","Euc_shift_dist"])
             # print(current_slice)
             animal_list.append(current_slice)
 # print(animal_list)

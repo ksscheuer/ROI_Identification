@@ -2,8 +2,8 @@ import pandas as pd
 import math
 import numpy
 
-ROIs_dat = pd.read_csv('ROIs01to10.dat',header=None)
-angle_deg_clock = 48
+ROIs_dat = pd.read_csv('ROIs01to06.dat',header=None)
+angle_deg_clock = 45
 angle_deg = 360-angle_deg_clock #formula below needs angle in counterclockwise, imageJ rotates clockwise
 
 ### Find tip of electrode ###
@@ -85,7 +85,7 @@ for ROI_Id in range(0,nROIs):
     ROI_distances_list.append([ROI_Id+1,ROI_xdistance,ROI_ydistance,ROI_euc_distance])
 ROI_distances = pd.DataFrame(ROI_distances_list,columns = ['ROI_Id','X_distance','Y_distance','Euc_distance'])
 print(ROI_distances)
-# ROI_distances.to_csv('ROI_distances.csv', index=False)
+ROI_distances.to_csv('ROI_distances.csv', index=False)
 
 ### Rotating so that layers are parallel with X-axis
 ### x2 = cos(angle)*x1 - sin(angle)*y1
@@ -149,7 +149,7 @@ for ROI_Id in range(0,nROIs):
 ROI_shifted_distances = pd.DataFrame(ROI_shifted_distances_list,columns = ['ROI_Id','X_shifted_distance',
                                                                    'Y_shifted_distance','Euc_shifted_distance'])
 print(ROI_shifted_distances)
-# ROI_shifted_distances.to_csv('ROI_shifted_distances.csv', index=False)
+ROI_shifted_distances.to_csv('ROI_shifted_distances.csv', index=False)
 
 
 
