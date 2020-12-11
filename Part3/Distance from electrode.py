@@ -2,7 +2,7 @@ import pandas as pd
 import math
 import numpy
 
-ROIs_dat = pd.read_csv('ROIs01to10.dat',header=None)
+ROIs_dat = pd.read_csv('ROIs01to05.dat',header=None)
 angle_deg_clock = 45
 angle_deg = 360-angle_deg_clock #formula below needs angle in counterclockwise, imageJ rotates clockwise
 
@@ -77,8 +77,8 @@ for ROI_Id in range(0,nROIs):
         ROI_ydistance_list.append(pixel_ydistance)
         pixel_euc_distance = math.sqrt(pixel_xdistance**2 + pixel_ydistance**2)
         ROI_euc_distance_list.append(pixel_euc_distance)
-        # print(pixel_xcoord,pixel_ycoord)
-        print(pixel_xdistance,pixel_ydistance,pixel_euc_distance)
+        print(pixel_xcoord,pixel_ycoord)
+        # print(pixel_xdistance,pixel_ydistance,pixel_euc_distance)
     # print(ROI_xdistance_list,ROI_ydistance_list)
     ROI_xdistance = sum(ROI_xdistance_list) / len(ROI_xdistance_list)
     ROI_ydistance = sum(ROI_ydistance_list) / len(ROI_ydistance_list)
@@ -86,7 +86,7 @@ for ROI_Id in range(0,nROIs):
     ROI_distances_list.append([ROI_Id+1,ROI_xdistance,ROI_ydistance,ROI_euc_distance])
 ROI_distances = pd.DataFrame(ROI_distances_list,columns = ['ROI_Id','X_distance','Y_distance','Euc_distance'])
 # print(ROI_distances)
-ROI_distances.to_csv('ROI_distances.csv', index=False)
+ROI_distances.to_csv('ROI_distances.txt', index=False)
 
 ### Rotating so that layers are parallel with X-axis
 ### x2 = cos(angle)*x1 - sin(angle)*y1
@@ -103,8 +103,8 @@ angle_rad = math.radians(angle_deg) #converts angle in degrees to angle in radia
 pixelID_to_coords_shifted = pixelID_to_coords
     # old origin is top L corner where y up as go down and x up as go right
     # want to get to origin at middle where y up as go up and x up as go right
-    # first shift x to R (+40.5) and y down (+40.5) keeping directions so y up as go down and x up as go right
-    #then flip over x axis (y * -1) so y up as go up and x up as go right
+    # first shift x to R (+40.5) and y down (-40.5) keeping directions so y up as go down and x up as go right
+    # then flip over x axis (y * -1) so y up as go up and x up as go right
 pixelID_to_coords_shifted.insert(len(pixelID_to_coords.columns),'XCoord_shifted',
                                  value=[x+40.5 for x in pixelID_to_coords.loc[:]['XCoord']])
 pixelID_to_coords_shifted.insert(len(pixelID_to_coords.columns),'YCoord_shifted',
@@ -134,8 +134,6 @@ for ROI_Id in range(0,nROIs):
     for pixel in ROI_pixelIds:
         # print(pixel)
         # print(pixelID_to_coords_shifted.iloc[pixel][:])
-        # pixel_x1coord = pixelID_to_coords_shifted.iloc[pixel][:].loc[:]['XCoord']
-        # pixel_y1coord = pixelID_to_coords_shifted.iloc[pixel][:].loc[:]['YCoord']
         pixel_x1coord = pixelID_to_coords_shifted.iloc[pixel][:].loc[:]['XCoord_shifted']
         pixel_y1coord = pixelID_to_coords_shifted.iloc[pixel][:].loc[:]['YCoord_shifted']
         pixel_x2coord = math.cos(angle_rad)*pixel_x1coord - math.sin(angle_rad)*pixel_y1coord
@@ -145,7 +143,6 @@ for ROI_Id in range(0,nROIs):
         pixel_y1distance = pixel_y1coord - electrode_tip_y1coord
         pixel_x2distance = pixel_x2coord - electrode_tip_x2coord
         pixel_euc1_distance = math.sqrt(pixel_x1distance**2 + pixel_y1distance**2)
-        # print('sep')
         # print(pixel_x1distance,pixel_y1distance,pixel_euc1_distance)
         ROI_shifted_xdistance_list.append(pixel_x2distance)
         pixel_y2distance = pixel_y2coord - electrode_tip_y2coord
@@ -153,7 +150,6 @@ for ROI_Id in range(0,nROIs):
         pixel_euc2_distance = math.sqrt(pixel_x2distance**2 + pixel_y2distance**2)
         print(pixel_x1distance,pixel_y1distance,pixel_euc1_distance,
               pixel_x2distance,pixel_y2distance,pixel_euc2_distance)
-        # print('sep')
         # print(pixel_x2distance,pixel_y2distance,pixel_euc2_distance)
         ROI_shifted_euc_distance_list.append(pixel_euc2_distance)
     # print(ROI_shifted_xdistance_list,ROI_shifted_ydistance_list)
@@ -164,7 +160,7 @@ for ROI_Id in range(0,nROIs):
 ROI_shifted_distances = pd.DataFrame(ROI_shifted_distances_list,columns = ['ROI_Id','X_shifted_distance',
                                                                    'Y_shifted_distance','Euc_shifted_distance'])
 # print(ROI_shifted_distances)
-ROI_shifted_distances.to_csv('ROI_shifted_distances.csv', index=False)
+ROI_shifted_distances.to_csv('ROI_shifted_distances.txt', index=False)
 
 
 

@@ -74,7 +74,9 @@ stim1_df = stim1_df.groupby(list(stim1_df['Full_ROI_Id']),sort=False).agg(
      'Stim_Layer': lambda x: x.iloc[0],'RLI': lambda x: x.iloc[0],'Cx': lambda x: x.iloc[0],
      'n_Pulses': lambda x: x.iloc[0],'Pulse_index': lambda x: x.iloc[0],'IPI': lambda x: x.iloc[0],
      'ROI_Id': lambda x: x.iloc[0],'Laminar': lambda x: x.iloc[0],'Visual': lambda x: x.iloc[0],
-     'Layers': lambda x: x.iloc[0],'Amp':'mean','SNR':'mean','Latency':'mean','Halfwidth':'mean'})
+     'Layers': lambda x: x.iloc[0],'Amp':'mean','SNR':'mean','Latency':'mean','Halfwidth':'mean',
+     'X_dist':'mean','Y_dist':'mean','Euc_dist':'mean','X_shift_dist':'mean','Y_shift_dist':'mean',
+     'Euc_shift_dist':'mean'})
 # print(stim1_df)
 stim1_df.to_csv('Stim1_Data.csv',index=False)
 
