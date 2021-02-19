@@ -8,17 +8,22 @@
 ### control+shift+H, navigate to correct folder, copy working directory
 ### from console below to text in quotes
 
+library(reticulate)
+# py_install("collections")
+# use_python("C:/Users/kates/AppData/Local/Programs/Python/Python38-82/python.exe")
 knitr::knit_engines$set(python = reticulate::eng_python)
+# knitr::opts_chunk$set(python.reticulate = FALSE)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/2020-07-18_ACC_PV_Run/02-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/Wen-chi/Day1/02-01")
 
 k <-  2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
-myslice <- "02"
-mydate <- "2020-07-18"
+  #ROI_diameter_cutoff = 2 for 10x lens and 3 for 20x lens
+myslice <- "02-01"
+mydate <- "Day 1 02-01"
 SNRcutoff <- 4
 Ampcutoff <- 0.001
-rois_per_dat_file <- 50 #60 makes it crash but 50 works
+rois_per_dat_file <- 5 #60 makes it crash but 50 works
 
 height = 80 #number of pixels in y axis
 width = 80 #number of pixels in x axis
@@ -110,26 +115,58 @@ ggplot(myfiles_df_cl,aes(x=X,y=Y)) +
 ggsave("Step2_Clusters.jpg",height=6,width=7.5)
 
 ```
+``` {r fig.width=7, fig.height=6}
+################## Remove cluster 1 and replot #############################
+############################################################################
+
+cluster_to_remove <- which(clusteraverages_all[,1]==min(clusteraverages_all[,1]))
+
+myfiles_df_cl_noclust1 <- myfiles_df_cl
+clusteraverages_noclust1 <- clusteraverages_all[-cluster_to_remove,]
+myfiles_df_cl_noclust1$Cluster[which(myfiles_df_cl_noclust1$Cluster==cluster_to_remove)] <- NA
+
+ggplot(myfiles_df_cl_noclust1,aes(x=X,y=Y)) +
+  geom_tile(aes(fill=myfiles_df_cl_noclust1$Cluster),color="gray") +
+  labs(title=paste("Step 2. Clusters"),subtitle=paste("Date: ",mydate,", Slice: ",myslice,", Clusters: ",k,sep=""), fill="SNR Avg +/- SD") +
+  theme(
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(hjust=0.5),
+    plot.subtitle = element_text(hjust=0.5),
+    legend.position = "none") +
+  scale_fill_gradient(na.value="lightgray") +
+  # ) +
+  # guides(fill = guide_legend(keyheight = 0.9)) 
+  scale_y_reverse() 
+  # scale_fill_gradientn(breaks=seq(1:k),
+  #                      labels=c(paste(round(clusteraverages_noclust1$Avg,3),"+/-",round(clusteraverages_noclust1$SD,3))),
+  #                      colors=rev(c("red1","yellow1","green1","dodgerblue1","navy"))
+  # )
+
+# ggsave("Step2b_Cluster.jpg",height=6,width=7.5)
+
+```
 
 ``` {r}
 ############ Convert data to height x width representation #################
 ############################################################################
 
-pixel_cluster_data <- t(matrix(myfiles_df_cl$Cluster, ncol=width, nrow=height))
+pixel_cluster_data <- t(matrix(myfiles_df_cl_noclust1$Cluster, ncol=width, nrow=height))
 pixel_cluster_data[is.na(pixel_cluster_data)] <- 0
-pixel_sn_data <- t(matrix(myfiles_df_cl$Avg, ncol=width, nrow=height))
+pixel_sn_data <- t(matrix(myfiles_df_cl_noclust1$Avg, ncol=width, nrow=height))
 pixel_amp_data <- t(matrix(ampfiles$Avg, ncol=width, nrow=height))
 
-myfiles_df_cl_with_electrode <- mutate(myfiles_df_cl,Electrode = 0)
+myfiles_df_cl_noclust1_with_electrode <- mutate(myfiles_df_cl_noclust1,Electrode = 0)
 for (i in 1:nrow(electrodepixels)) {
-  myfiles_df_cl_with_electrode$Electrode[which(myfiles_df_cl_with_electrode$PixelID==electrodepixels[i,1])] <- 1
+  myfiles_df_cl_noclust1_with_electrode$Electrode[which(myfiles_df_cl_noclust1_with_electrode$PixelID==electrodepixels[i,1])] <- 1
 }
-electrode_data <- t(matrix(myfiles_df_cl_with_electrode$Electrode, ncol=width, nrow=height))
+electrode_data <- t(matrix(myfiles_df_cl_noclust1_with_electrode$Electrode, ncol=width, nrow=height))
 
-electrode_x_min <- min(myfiles_df_cl_with_electrode$X[which(myfiles_df_cl_with_electrode$Electrode==1)])
-electrode_tip_x <- max(myfiles_df_cl_with_electrode$X[which(myfiles_df_cl_with_electrode$Electrode==1)])
-electrode_y_min <- min(myfiles_df_cl_with_electrode$Y[which(myfiles_df_cl_with_electrode$Electrode==1)])
-electrode_y_max <- max(myfiles_df_cl_with_electrode$Y[which(myfiles_df_cl_with_electrode$Electrode==1)])
+electrode_x_min <- min(myfiles_df_cl_noclust1_with_electrode$X[which(myfiles_df_cl_noclust1_with_electrode$Electrode==1)])
+electrode_tip_x <- max(myfiles_df_cl_noclust1_with_electrode$X[which(myfiles_df_cl_noclust1_with_electrode$Electrode==1)])
+electrode_y_min <- min(myfiles_df_cl_noclust1_with_electrode$Y[which(myfiles_df_cl_noclust1_with_electrode$Electrode==1)])
+electrode_y_max <- max(myfiles_df_cl_noclust1_with_electrode$Y[which(myfiles_df_cl_noclust1_with_electrode$Electrode==1)])
 electrode_tip_y <- (electrode_y_min + electrode_y_max) / 2
 
 ```
@@ -140,8 +177,8 @@ electrode_tip_y <- (electrode_y_min + electrode_y_max) / 2
 ############ Identify each potential ROI and bounds for each ROI ###########
 ############################################################################
 
-import numpy
 import matplotlib.pyplot as plt
+import numpy
 import pandas
 import scipy
 import collections
@@ -532,8 +569,8 @@ final_rois$Y <- final_rois_from_python[,2]+1
 final_rois$SNR <- final_rois_from_python[,3]
 
 for (i in 1:nrow(final_rois)) {
-  all_x <- which(myfiles_df_cl$X==final_rois$X[i])
-  all_y <- which(myfiles_df_cl$Y==final_rois$Y[i])
+  all_x <- which(myfiles_df_cl_noclust1$X==final_rois$X[i])
+  all_y <- which(myfiles_df_cl_noclust1$Y==final_rois$Y[i])
   final_rois$Pixel_ID[i] <- intersect(all_x,all_y)
 }
 
@@ -606,5 +643,7 @@ for (i in 2:length(datfilebreakpoints)) {
             row.names = FALSE)
   }
 }
+
+#### END ####
 
 ```

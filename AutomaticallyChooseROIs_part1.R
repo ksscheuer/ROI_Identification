@@ -2,8 +2,8 @@
 ############################################################################
 
 maxkclust <- 10 #maximum number of potential clusters
-myslice <- "04-01"
-mydate <- "2020-07-16"
+myslice <- "02-01"
+mydate <- "Day1"
 dateSlice <- paste(mydate,myslice,sep=" ")
 
 ############# Load libraries, load data, and make df to fill ###############
@@ -223,3 +223,4 @@ ggsave("Step1b_silhouetteplot.jpeg",height=6,width=6)
 write.csv(myclusterdata,"EachPixel_Cluster.csv",row.names = FALSE)
 write.csv(myfiles,"EachPixel_SNR_Data.csv",row.names = FALSE)
 write.csv(ampfiles,"EachPixel_Amp_Data.csv",row.names = FALSE)
+

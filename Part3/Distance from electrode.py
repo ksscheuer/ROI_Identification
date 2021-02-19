@@ -2,8 +2,8 @@ import pandas as pd
 import math
 import numpy
 
-ROIs_dat = pd.read_csv('ROIs01to05.dat',header=None)
-angle_deg_clock = 45
+ROIs_dat = pd.read_csv('ROIs51to76.dat',header=None)
+angle_deg_clock = 92
 angle_deg = 360-angle_deg_clock #formula below needs angle in counterclockwise, imageJ rotates clockwise
 
 ### Find tip of electrode ###
@@ -77,7 +77,7 @@ for ROI_Id in range(0,nROIs):
         ROI_ydistance_list.append(pixel_ydistance)
         pixel_euc_distance = math.sqrt(pixel_xdistance**2 + pixel_ydistance**2)
         ROI_euc_distance_list.append(pixel_euc_distance)
-        print(pixel_xcoord,pixel_ycoord)
+        # print(pixel_xcoord,pixel_ycoord)
         # print(pixel_xdistance,pixel_ydistance,pixel_euc_distance)
     # print(ROI_xdistance_list,ROI_ydistance_list)
     ROI_xdistance = sum(ROI_xdistance_list) / len(ROI_xdistance_list)
