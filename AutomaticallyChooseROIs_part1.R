@@ -1,108 +1,136 @@
-########################## Set initial values###############################
+############### Load libraries and set initial values ######################
 ############################################################################
 
-maxkclust <- 10 #maximum number of potential clusters
-myslice <- "02-01"
-mydate <- "Day1"
-dateSlice <- paste(mydate,myslice,sep=" ")
+library(stringr)
+library(ggplot2)
+library(Ckmeans.1d.dp)
+library(factoextra)
 
-############# Load libraries, load data, and make df to fill ###############
+xdim <- 80 #pixels in X direction
+ydim <- 80 #pixels in Y direction
+SNRcutoff_choice <- "pre-stim mean"
+  #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values 
+  #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values 
+  #before stimulus, or "pre-stim max" for the maximum value of SNR values 
+  #before stimulus
+k_choice <- "automatic"
+  #can be pre-set value or automatically determined based on BIC (see 
+  #Ckmeans.1d.dp package for details)
+
+
+########################### Load files #####################################
 ############################################################################
 
-suppressMessages(suppressWarnings(library(dendextend)))
-suppressMessages(suppressWarnings(library(ggplot2)))
-suppressMessages(suppressWarnings(library(colorRamps)))
-suppressMessages(suppressWarnings(library(dplyr)))
-suppressMessages(suppressWarnings(library(factoextra)))
-suppressMessages(suppressWarnings(library(reshape2)))
-suppressMessages(suppressWarnings(library(stringr)))
-suppressMessages(suppressWarnings(library(tibble)))
-suppressMessages(suppressWarnings(library(RColorBrewer)))
-suppressMessages(suppressWarnings(library(stringr)))
-
-clusteraverages_all <- data.frame(matrix(nrow=maxkclust,ncol=maxkclust))
-colnames(clusteraverages_all) <- paste(rep("TotalClust"),1:maxkclust,sep="")
-rownames(clusteraverages_all) <- paste(rep("AvgCluster"),1:maxkclust,sep="")
-
-myfilenames <- list.files(pattern=".txt")
-nostimfilenames <- myfilenames[str_detect(myfilenames,"_noStim")]
-ampfilenames <- myfilenames[str_detect(myfilenames,"_amp")]
-myfilenames <- myfilenames[!str_detect(myfilenames,"_noStim")]
-myfilenames <- myfilenames[!str_detect(myfilenames,"_amp")]
-nostimfilelist <- lapply(nostimfilenames,read.table)
-ampfilelist <- lapply(ampfilenames,read.table)
-myfilelist <- lapply(myfilenames,read.table)
-
-################ Find SNR cutoff based on no stim file #####################
+prestim_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_preStim")]
+  #list of file names for files containing SNR values before stimulus
+amp_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_amp")]
+  #list of file names for files containing amplitude values
+snr_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_snr")]
+  #list of file names for files containing SNR values
+  
+########################## Average data ####################################
 ############################################################################
 
-nostimfiles <- as.data.frame(matrix(ncol=length(nostimfilelist)+1,
-                                nrow=nrow(myfilelist[[1]])))
-colnames(nostimfiles) <- c(gsub(".txt","",nostimfilenames),"Average")
-for (i in 1:length(nostimfilelist)) {
-  nostimfiles[,i] <- nostimfilelist[[i]][,2]
+prestim_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(prestim_filenames)+1))
+colnames(prestim_data) <- c(gsub("_preStim.txt","",prestim_filenames),"Avg")
+if (length(prestim_filenames) > 1) {
+  for (i in 1:length(prestim_filenames)) {
+    prestim_data[,i] <- read.table(prestim_filenames[i])[,2]
+  }
+  prestim_data[,ncol(prestim_data)] <- rowMeans(prestim_data[,1:ncol(prestim_data)-1])
+} else if (prestim_filenames == 1) {
+  warning("Only one file with pre-stimulus SNR values.")
+  prestim_data[,1] <- read.table(prestim_filenames[1])[,2]
+  prestim_data[,2] <- read.table(prestim_filenames[1])[,2]
 }
+  #create, name, and fill matrix where each column contains SNR values 
+  #before stimulus for one prestim file and last column contains average
+  #SNR value before stimulus across all trials
 
-if (length(nostimfilelist) > 1) {
-  nostimfiles$Average <- rowMeans(nostimfiles[,1:(length(nostimfiles)-1)])
+amp_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(amp_filenames)+1))
+colnames(amp_data) <- c(gsub("_amp.txt","",amp_filenames),"Avg")
+if (length(amp_filenames) > 1) {
+  for (i in 1:length(amp_filenames)) {
+    amp_data[,i] <- read.table(amp_filenames[i])[,2]
+  }
+  amp_data[,ncol(amp_data)] <- rowMeans(amp_data[,1:ncol(amp_data)-1])
+} else if (amp_filenames == 1) {
+  warning("Only one file with amplitude values.")
+  amp_data[,1] <- read.table(amp_filenames[1])[,2]
+  amp_data[,2] <- read.table(amp_filenames[1])[,2]
+}
+  #create, name, and fill matrix where each column contains amplitude
+  #values before stimulus for one amp file and last column contains 
+  #amplitude value before stimulus across all trials
+
+snr_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(snr_filenames)+1))
+colnames(snr_data) <- c(gsub("_snr.txt","",snr_filenames),"Avg")
+if (length(snr_filenames) > 1) {
+  for (i in 1:length(snr_filenames)) {
+    snr_data[,i] <- read.table(snr_filenames[i])[,2]
+  }
+  snr_data[,ncol(snr_data)] <- rowMeans(snr_data[,1:ncol(snr_data)-1])
+} else if (snr_filenames == 1) {
+  warning("Only one file with SNR values.")
+  snr_data[,1] <- read.table(snr_filenames[1])[,2]
+  snr_data[,2] <- read.table(snr_filenames[1])[,2]
+}
+  #create, name, and fill matrix where each column contains SNR values 
+  #for one SNR file and last column contains average SNR value across
+  #all trials
+
+############################ SNR cutoff ####################################
+############################################################################
+
+#set and plot SNR cutoff based on choice made at top of file
+if (SNRcutoff_choice == "pre-stim mean") {
+  SNRcutoff <- mean(prestim_data$Avg)
+  ggplot(prestim_data,aes(x=Avg)) +
+    geom_density() +
+    labs(x="SNR",title=paste("Mean Pre-Stimulus SNR = ",round(SNRcutoff,3))) +
+    geom_vline(xintercept=SNRcutoff) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+  ggsave("SNRcutoff.jpg")
+} else if (SNRcutoff_choice == "pre-stim 95%ile") {
+  SNRcutoff <- qnorm(0.95,mean=mean(prestim_data$Avg),sd=sd(prestim_data$Avg))
+  ggplot(prestim_data,aes(x=Avg)) +
+    geom_density() +
+    labs(x="SNR",title=paste("95th Percentile Pre-Stimulus SNR = ",round(SNRcutoff,3))) +
+    geom_vline(xintercept=SNRcutoff) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+  ggsave("SNRcutoff.jpg")
+} else if (SNRcutoff_choice == "pre-stim max") {
+  SNRcutoff <- max(prestim_data$Avg)
+  ggplot(prestim_data,aes(x=Avg)) +
+    geom_density() +
+    labs(x="SNR",title=paste("Max Pre-Stimulus SNR = ",round(SNRcutoff,3))) +
+    geom_vline(xintercept=SNRcutoff) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+  ggsave("SNRcutoff.jpg")
 } else {
-  nostimfiles$Average <- nostimfiles[,1]
+  SNRcutoff <- SNRcutoff_choice
+  ggplot(prestim_data,aes(x=Avg)) +
+    geom_density() +
+    labs(x="SNR",title=paste("SNR Cutoff = ",SNRcutoff)) +
+    geom_vline(xintercept=SNRcutoff) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+  ggsave("SNRcutoff.jpg")
 }
 
-SNRcutoff <- qnorm(0.95,mean=mean(nostimfiles$Average),sd=sd(nostimfiles$Average))
-
-################ Plot SNR cutoff based on no stim file #####################
+############################## Plot SNR ####################################
 ############################################################################
 
-ggplot(nostimfiles,aes(x=nostimfiles$Average)) +
-  geom_density() +
-  labs(x="SNR",title=paste("No Stim SNR, 95th %ile Cutoff = ",round(SNRcutoff,3))) +
-  geom_vline(xintercept=SNRcutoff) +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-ggsave("Step0a_SNRcutoff.jpg",width=6,height=6)
-
-######################## Average SNR data ###################################
-############################################################################
-
-myfiles <- as.data.frame(matrix(ncol=length(myfilelist)+5,
-                                nrow=nrow(myfilelist[[1]])))
-colnames(myfiles) <- c("PixelID","X","Y",
-                       gsub(".txt","",myfilenames),
-                       "Avg","AvgGps")
-myfiles$PixelID <- myfilelist[[1]][,1]
-myfiles$X <- rep(1:80,80)
-myfiles$Y <- rep(1:80,each=80)
-
-for (i in 1:length(myfilelist)) {
-  myfiles[,i+3] <- myfilelist[[i]][,2]
-}
-
-myfiles_SNRcutoff <- myfiles[,c(1:(ncol(myfiles)-2))]
-for (i in 1:length(myfilenames)) {
-  for (j in 1:nrow(myfiles_SNRcutoff)) {
-    if (myfiles_SNRcutoff[j,3+i] <= SNRcutoff) {
-      myfiles_SNRcutoff[j,3+i] <- NA
-    }
-  }
-}
-
-myfiles$Avg <- rowMeans(myfiles[,4:(ncol(myfiles)-2)])
-myfiles$AvgGps <- myfiles$Avg
-for (i in 1:nrow(myfiles)) {
-  if (myfiles$Avg[i] <= SNRcutoff) {
-    myfiles$AvgGps[i] <- NA
-  }
-}
-
-########################## Plot SNR data ###################################
-############################################################################
-
-for (i in 1:(ncol(myfiles_SNRcutoff)-3)) {
-  ggplot(myfiles_SNRcutoff,aes(x=X,y=Y)) +
-    geom_tile(aes(fill=myfiles_SNRcutoff[,3+i])) +
-    labs(title=paste(dateSlice," SNR")) +
+#plot SNR values for each file and the overall average
+snr_coords_data <- data.frame(rep(1:ydim,xdim),rep(1:ydim,each=xdim),snr_data)
+colnames(snr_coords_data) <- c("X","Y",colnames(snr_data))
+for (i in 3:ncol(snr_data)+2) {
+  ggplot(snr_coords_data,aes(x=X,y=Y)) +
+    geom_tile(aes(fill=snr_coords_data[,i])) +
+    labs(title=paste(colnames(snr_coords_data)[i]," SNR")) +
     theme(
       axis.title.y = element_blank(),
       axis.title.x = element_blank(),
@@ -116,72 +144,20 @@ for (i in 1:(ncol(myfiles_SNRcutoff)-3)) {
     scale_fill_gradientn(colors=rev(c(
       "red1","yellow1","green1","dodgerblue1","navy"))
     )
-  ggsave(paste("Step0b_IndivHeatmap_SNR_",colnames(myfiles_SNRcutoff)[i+3],".jpg",sep=""),width=6.5,height=6)
+  ggsave(paste("SNR_",colnames(snr_coords_data)[i],".jpg",sep=""),width=6.5,height=6)
 }
 
-ggplot(myfiles,aes(x=X,y=Y)) +
-  geom_tile(aes(fill=myfiles$AvgGps)) +
-  labs(title=paste(dateSlice, " Average SNR")) +
-  theme(
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank(),
-    axis.ticks = element_blank(),
-    axis.text = element_blank(),
-    panel.background = element_blank(),
-    legend.title = element_blank(),
-    plot.title = element_text(hjust=0.5)
-  ) +
-  scale_y_reverse() +
-  scale_fill_gradientn(colors=rev(c(
-  "red1","yellow1","green1","dodgerblue1","navy"))
-)
-ggsave("Step0c_AvgHeatmap_SNR.jpg",height=6,width=6.5)
-
-#################### Average amplitude data ################################
-############################################################################
-
-ampfiles <- as.data.frame(matrix(ncol=length(ampfilelist)+5,
-                                nrow=nrow(ampfilelist[[1]])))
-colnames(ampfiles) <- c("PixelID","X","Y",
-                       gsub(".txt","",ampfilenames),
-                       "Avg","AvgGps")
-ampfiles$PixelID <- ampfilelist[[1]][,1]
-ampfiles$X <- rep(1:80,80)
-ampfiles$Y <- rep(1:80,each=80)
-
-for (i in 1:length(ampfilelist)) {
-  ampfiles[,i+3] <- ampfilelist[[i]][,2]
+snr_coords_data["Avg_cutoff"] <- snr_coords_data$Avg
+for (i in 1:nrow(snr_coords_data)) {
+  if (snr_coords_data$Avg_cutoff[i]<SNRcutoff) {
+    snr_coords_data$Avg_cutoff[i] <- NA
+  }
 }
 
-ampfiles$Avg <- rowMeans(ampfiles[,4:(ncol(ampfiles)-2)])
-ampfiles$AvgGps <- ampfiles$Avg
-
-######################### Plot amplitude data ##############################
-############################################################################
-
-for (i in 1:(ncol(ampfiles)-5)) {
-  ggplot(ampfiles,aes(x=X,y=Y)) +
-    geom_tile(aes(fill=ampfiles[,3+i])) +
-    labs(title=paste(dateSlice, " Amplitude")) +
-    theme(
-      axis.title.y = element_blank(),
-      axis.title.x = element_blank(),
-      axis.ticks = element_blank(),
-      axis.text = element_blank(),
-      panel.background = element_blank(),
-      legend.title = element_blank(),
-      plot.title = element_text(hjust=0.5)
-    ) +
-    scale_y_reverse() +
-    scale_fill_gradientn(colors=rev(c(
-      "red1","yellow1","green1","dodgerblue1","navy"))
-    )
-  ggsave(paste("Step0b_IndivHeatmap_Amp_",colnames(ampfiles)[i+3],".jpg",sep=""),width=6.5,height=6)
-}
-
-ggplot(ampfiles,aes(x=X,y=Y)) +
-  geom_tile(aes(fill=ampfiles$AvgGps)) +
-  labs(title=paste(dateSlice, " Average Amplitude")) +
+#plot SNR values for average, excluding pixels where SNR < cutoff
+ggplot(snr_coords_data,aes(x=X,y=Y)) +
+  geom_tile(aes(fill=Avg_cutoff)) +
+  labs("SNR > Cutoff") +
   theme(
     axis.title.y = element_blank(),
     axis.title.x = element_blank(),
@@ -195,32 +171,92 @@ ggplot(ampfiles,aes(x=X,y=Y)) +
   scale_fill_gradientn(colors=rev(c(
     "red1","yellow1","green1","dodgerblue1","navy"))
   )
-ggsave("Step0c_AvgHeatmap_Amp.jpg",height=6,width=6.5)
+ggsave(paste("SNR_above_cutoff.jpg"),width=6.5,height=6)
 
-######### hierarchical clustering: find optimal number of clusters  ########
+################# One-dimensional K-means clustering #######################
 ############################################################################
 
-idAvgNotNa <- which(!is.na(myfiles$AvgGps))
-mycolids <- c(which(colnames(myfiles)=="PixelID"),which(colnames(myfiles)=="X"),
-              which(colnames(myfiles)=="Y"),which(colnames(myfiles)=="AvgGps"))
-myclusterdata <- myfiles[idAvgNotNa,mycolids]
+# snr_vals_to_cluster <- intersect(which(snr_data$Avg>SNRcutoff),which(!is.na(snr_data$Avg)))
+clustering_results <- Ckmeans.1d.dp(snr_coords_data$Avg_cutoff[which(!is.na(snr_coords_data$Avg_cutoff))])
+  #using only SNR values > cutoff, perform K-means clustering optimized for 
+  #one-dimensional data (see Ckmeans.1d.dp package and "Ckmeans.1d.dp: 
+  #Optimal k-means Clustering in One dimension by Dynamic Programming" by 
+  #Wang, H. and Song, M. published in The R Journal Vol 3/2 Dec 2011)
 
-myclustAvgGps_df_sc <- as.data.frame(myclusterdata$AvgGps)
+#automatically choose number of clusters based on BIC value or manually 
+#determine number of clusters
+if (k_choice == "automatic") { 
+  k <- max(clustering_results$cluster)
+} else {
+  k <- k_choice
+}
 
-elbowplot <- fviz_nbclust(myclustAvgGps_df_sc, hcut, method = "wss")  #hcut based on hclust which is agglomerative
-elbowplot
-ggsave("Step1a_elbowplot.jpeg",height=6,width=6)
+#pair each pixel with SNR value > cutoff with appropriate cluster value
+counter <- 1
+cluster_coords_data <- data.frame(matrix(ncol=5,nrow=xdim*ydim))
+colnames(cluster_coords_data) <- c("X","Y","SNR","Cluster","Cluster_w_Electrode")
+cluster_coords_data[,1:3] <- snr_coords_data[,c(1,2,ncol(snr_coords_data)-1)]
+for (i in 1:nrow(cluster_coords_data)) {
+  if (!(is.na(cluster_coords_data$SNR[i])) & cluster_coords_data$SNR[i] >= SNRcutoff) {
+    cluster_coords_data$Cluster[i] <- clustering_results$cluster[counter]
+    counter <- counter + 1
+  }
+}
 
+#plot clusters
+ggplot(cluster_coords_data,aes(x=X,y=Y)) +
+  geom_tile(aes(fill=Cluster)) +
+  labs(title="Clusters") +
+  theme(
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    panel.background = element_blank(),
+    legend.title = element_blank(),
+    plot.title = element_text(hjust=0.5)
+  ) +
+  scale_y_reverse() +
+  scale_fill_gradientn(breaks=seq(1:k),labels=paste(round(clustering_results$centers,3)),
+    colors=rev(c(
+    "red1","yellow1","green1","dodgerblue1","navy"))
+  )
+ggsave("Clusters.jpg",width=6.5,height=6)
 
-silhouetteplot <- fviz_nbclust(myclustAvgGps_df_sc, hcut, method = "silhouette")
-silhouetteplot
-ggsave("Step1b_silhouetteplot.jpeg",height=6,width=6)
-# gap plot takes too long to make and usually says only one cluster
-
-####################### Save cluster data as csv ###########################
+###################### Indicate electrode location #########################
 ############################################################################
 
-write.csv(myclusterdata,"EachPixel_Cluster.csv",row.names = FALSE)
-write.csv(myfiles,"EachPixel_SNR_Data.csv",row.names = FALSE)
-write.csv(ampfiles,"EachPixel_Amp_Data.csv",row.names = FALSE)
+#add column which contains cluster value for each pixel where k+1 cluster 
+#is electrode, find coordinate boundaries of electrode
+cluster_coords_data["Clusters_w_Electrode"] <- cluster_coords_data$Cluster
+if ("electrode.csv" %in% list.files()) {
+  electrode_pixels <- read.csv("electrode.csv")
+  for (i in 1:nrow(electrode_pixels)) {
+    cluster_coords_data$Clusters_w_Electrode[electrode_pixels[i,1]] <- k+1
+  }
+  electrode_loc <- data.frame(matrix(ncol=5,nrow=1))
+  colnames(electrode_loc) <- c("X_min","Y_min","Y_max","X_tip","Y_tip")
+  electrode_loc$X_min <- min(cluster_coords_data$X[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
+  electrode_loc$Y_min <- min(cluster_coords_data$Y[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
+  electrode_loc$Y_max <- max(cluster_coords_data$Y[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
+  electrode_loc$X_tip <- max(cluster_coords_data$X[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
+  electrode_loc$Y_tip <- (electrode_loc$Y_min + electrode_loc$Y_max)/2
+} else warning("Cannot locate file with electrode pixels.")
 
+############################## Save values #################################
+############################################################################
+
+write.table(prestim_data,"PreStim_all.txt",row.names = FALSE)
+write.table(amp_data,"Amp_all.txt",row.names = FALSE)
+write.table(snr_coords_data,"SNR_all.txt",row.names = FALSE)
+write.table(cluster_coords_data,"Clusters_all.txt",row.names = FALSE)
+write.table(electrode_loc,"Electrode_coords.txt",row.names = FALSE)
+
+#save cluster values as xdim by ydim matrix ready for import to Python
+clusters_for_python <- t(matrix(cluster_coords_data$Cluster, ncol=xdim, nrow=ydim))
+write.table(clusters_for_python,"Clusters_for_python.txt",row.names = FALSE,col.names = FALSE)
+
+#save cluster values (where electrode is k+1th cluster) as xdim by ydim
+#matrix ready for import to Python
+clusters_w_electrode_for_python <- t(matrix(cluster_coords_data$Clusters_w_Electrode, ncol=xdim, nrow=ydim))
+write.table(clusters_w_electrode_for_python,"Clusters_w_Electrode_for_python.txt",row.names = FALSE,col.names = FALSE)
