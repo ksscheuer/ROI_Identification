@@ -8,7 +8,7 @@ library(factoextra)
 
 xdim <- 80 #pixels in X direction
 ydim <- 80 #pixels in Y direction
-SNRcutoff_choice <- "pre-stim mean"
+SNRcutoff_choice <- 2.020029 #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
   #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values 
   #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values 
   #before stimulus, or "pre-stim max" for the maximum value of SNR values 
@@ -38,7 +38,7 @@ if (length(prestim_filenames) > 1) {
     prestim_data[,i] <- read.table(prestim_filenames[i])[,2]
   }
   prestim_data[,ncol(prestim_data)] <- rowMeans(prestim_data[,1:ncol(prestim_data)-1])
-} else if (prestim_filenames == 1) {
+} else if (length(prestim_filenames) == 1) {
   warning("Only one file with pre-stimulus SNR values.")
   prestim_data[,1] <- read.table(prestim_filenames[1])[,2]
   prestim_data[,2] <- read.table(prestim_filenames[1])[,2]
