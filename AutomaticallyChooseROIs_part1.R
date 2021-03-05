@@ -12,7 +12,8 @@ SNRcutoff_choice <- 2.020029 #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
   #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values 
   #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values 
   #before stimulus, or "pre-stim max" for the maximum value of SNR values 
-  #before stimulus
+  #before stimulus, or "RMS" for root mean square noise calculated as
+  #squareroot fo the mean of squared(average pre-stimulus SNR values)
 k_choice <- "automatic"
   #can be pre-set value or automatically determined based on BIC (see 
   #Ckmeans.1d.dp package for details)
@@ -54,7 +55,7 @@ if (length(amp_filenames) > 1) {
     amp_data[,i] <- read.table(amp_filenames[i])[,2]
   }
   amp_data[,ncol(amp_data)] <- rowMeans(amp_data[,1:ncol(amp_data)-1])
-} else if (amp_filenames == 1) {
+} else if (length(amp_filenames) == 1) {
   warning("Only one file with amplitude values.")
   amp_data[,1] <- read.table(amp_filenames[1])[,2]
   amp_data[,2] <- read.table(amp_filenames[1])[,2]
@@ -70,7 +71,7 @@ if (length(snr_filenames) > 1) {
     snr_data[,i] <- read.table(snr_filenames[i])[,2]
   }
   snr_data[,ncol(snr_data)] <- rowMeans(snr_data[,1:ncol(snr_data)-1])
-} else if (snr_filenames == 1) {
+} else if (length(snr_filenames) == 1) {
   warning("Only one file with SNR values.")
   snr_data[,1] <- read.table(snr_filenames[1])[,2]
   snr_data[,2] <- read.table(snr_filenames[1])[,2]
@@ -106,6 +107,15 @@ if (SNRcutoff_choice == "pre-stim mean") {
   ggplot(prestim_data,aes(x=Avg)) +
     geom_density() +
     labs(x="SNR",title=paste("Max Pre-Stimulus SNR = ",round(SNRcutoff,3))) +
+    geom_vline(xintercept=SNRcutoff) +
+    theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5))
+  ggsave("SNRcutoff.jpg")
+} else if (SNRcutoff_choice == "RMS") {
+  SNRcutoff <- sqrt(mean(prestim_data$Avg^2))
+  ggplot(prestim_data,aes(x=Avg)) +
+    geom_density() +
+    labs(x="SNR",title=paste("RMS Noise for SNR = ",round(SNRcutoff,3))) +
     geom_vline(xintercept=SNRcutoff) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
