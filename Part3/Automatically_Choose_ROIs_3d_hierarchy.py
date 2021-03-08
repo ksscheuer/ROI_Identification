@@ -1,36 +1,21 @@
 
-
-
-
-
-
-
-
-
 # MAKE SURE THAT ENABLE SO CAN DO WITHOUT NEEDING ELECTRODE TO BE IN VIEW
+# AT THE END OF EVERY STEP MAKE SURE THERE'S A PLOT COMING OUT AND A SET OF
+# .DAT FILES SO CAN FEED INTO PHOTOZ TO SEE OPTIONS
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+# SEE IF CAN MAKE PLOTS OF 3D HIERARCHICAL CLUSTERING
 
 ####################################### Load initial values, libraries, and data ######################################
 
-date = "2020-12-29"
-slice = "01-01"
+# date = "2020-12-29"
+# slice = "01-01"
 xdim = 80 #number of pixels in X dimension
 ydim = 80 #number of pixels in Y dimension
 snr_cutoff = 4 #minimum SNR value to be included in clustering
-date_slice = date + " " + slice
+# date_slice = date + " " + slice
+
+clusters = np.loadtxt("Clusters_for_python.txt")
+clusters_w_electrode = np.loadtxt("Clusters_w_Electrode_for_python.txt")
 
 import os
 import numpy as np
@@ -41,6 +26,19 @@ from sklearn.cluster import KMeans
 import itertools
 from scipy.interpolate import griddata
 # import plotly.plotly as py
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ######################################## Average and plot SNR and amplitude data #######################################
 
@@ -97,7 +95,7 @@ snr_mean_plot = np.reshape(snr_mean,(xdim,ydim))
 # y_hc = hc.fit_predict(snr_mean)
 
 # print(snr_plot)
-snr_coords = np.zeros([(xdim*ydim),3])
+snr_coords = np.zeros([(xdim*ydim),4])
 snr_coords[:,2] = snr_mean
 snr_coords[:,0] = np.repeat(range(ydim),xdim)
 snr_coords[:,1] = list(range(ydim))*xdim
@@ -132,13 +130,53 @@ snr_coords_cluster = snr_coords[snr_coords[:,2] > snr_cutoff]
 # snr_coords_cluster[:,2] =  snr_coords_cluster[:,2]*10
 # print(snr_coords_cluster)
 #
-plt.figure(figsize=(17,4),dpi=280)
-plt.title("Dendrogram",fontsize=22)
-dend = shc.dendrogram(shc.linkage(snr_coords_cluster,method='ward'))
-plt.xticks(fontsize=6)
-# plt.show()
-plt.savefig("Dendrogram.jpg")
+# plt.figure(figsize=(17,4),dpi=280)
+# plt.title("Dendrogram",fontsize=22)
+# dend = shc.dendrogram(shc.linkage(snr_coords_cluster,method='ward'))
+# plt.xticks(fontsize=6)
+# # plt.show()
+# plt.savefig("Dendrogram.jpg")
 
+cluster = AgglomerativeClustering(n_clusters = 10,affinity='euclidean',linkage='ward')
+clustered_pixel_list = cluster.fit_predict(snr_coords_cluster)
+# print(clustered_pixel_list)
+clustered_pixel = 0
+for row in range(len(snr_coords[:,2])):
+    # print(row)
+    if snr_coords[row,2] < snr_cutoff:
+        snr_coords[row,3] = np.nan
+    else:
+        snr_coords[row,3] = clustered_pixel_list[clustered_pixel]
+        clustered_pixel += 1
+print(snr_coords)
+
+cluster_plot = np.reshape(snr_coords[:,3],(xdim,ydim))
+plt.matshow(cluster_plot)
+plt.show()
+
+# print(snr_array)
+# snr_clustered = np.zeros([xdim,ydim])
+# snr_clustered[snr_clustered < snr_cutoff] = NA
+# print(snr_clustered)
+# for row_element in range(ydim):
+#     for col_element in range(xdim):
+#         print(snr_array[row_element,col_element])
+        # if snr_coords[row_element] < snr_cutoff:
+        #     snr_clustered[element] = numpy.nan
+# print(snr_clustered)
+
+# fig = plt.figure()
+# ax = plt.axes(projection='3d')
+# xi = np.linspace(min(snr_coords[:,0]),max(snr_coords[:,1]))
+# yi = np.linspace(min(snr_coords[:,1]),max(snr_coords[:,0]))
+# X, Y = np.meshgrid(xi,yi)
+# Z = f(X,Y)
+# Z = griddata(snr_coords[:,0],snr_coords[:,1],snr_coords[:,2],xi,yi)
+# ax.scatter(snr_coords_cluster[:,0],snr_coords_cluster[:,1],snr_coords_cluster[:,2],c=KF)
+# ax.plot(snr_coords_cluster[:,0],snr_coords_cluster[:,1],snr_coords_cluster[:,2],c=KF)
+# # ax.plot(snr_coords[:,0],snr_coords[:,1],snr_coords[:,2])
+# # ax.contour3D(snr_coords[:,0],snr_coords[:,1],snr_coords[:,2],50)
+# plt.show()
 
 
 

@@ -8,7 +8,7 @@ library(factoextra)
 
 xdim <- 80 #pixels in X direction
 ydim <- 80 #pixels in Y direction
-SNRcutoff_choice <- 2.020029 #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
+SNRcutoff_choice <- "pre-stim max" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
   #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values 
   #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values 
   #before stimulus, or "pre-stim max" for the maximum value of SNR values 
@@ -187,7 +187,8 @@ ggsave(paste("SNR_above_cutoff.jpg"),width=6.5,height=6)
 ############################################################################
 
 # snr_vals_to_cluster <- intersect(which(snr_data$Avg>SNRcutoff),which(!is.na(snr_data$Avg)))
-clustering_results <- Ckmeans.1d.dp(snr_coords_data$Avg_cutoff[which(!is.na(snr_coords_data$Avg_cutoff))])
+clustering_results <- Ckmeans.1d.dp(snr_coords_data$Avg_cutoff[which(!is.na(snr_coords_data$Avg_cutoff))],
+                                    k=c(1,20))
   #using only SNR values > cutoff, perform K-means clustering optimized for 
   #one-dimensional data (see Ckmeans.1d.dp package and "Ckmeans.1d.dp: 
   #Optimal k-means Clustering in One dimension by Dynamic Programming" by 
@@ -236,20 +237,22 @@ ggsave("Clusters.jpg",width=6.5,height=6)
 ###################### Indicate electrode location #########################
 ############################################################################
 
-#add column which contains cluster value for each pixel where k+1 cluster 
-#is electrode, find coordinate boundaries of electrode
-cluster_coords_data["Clusters_w_Electrode"] <- cluster_coords_data$Cluster
+#add column which contains electrode location such that pixel in electrode 
+#= 1 and all other pixels = 0, find coordinate boundaries of electrode
+cluster_coords_data["Electrode"] <- 0
 if ("electrode.csv" %in% list.files()) {
   electrode_pixels <- read.csv("electrode.csv")
+  electrode_pixels <- electrode_pixels + 1 #because python starts counting at 0
   for (i in 1:nrow(electrode_pixels)) {
-    cluster_coords_data$Clusters_w_Electrode[electrode_pixels[i,1]] <- k+1
+    # cluster_coords_data$Clusters_w_Electrode[electrode_pixels[i,1]] <- k+1
+    cluster_coords_data$Electrode[electrode_pixels[i,1]] <- 1
   }
   electrode_loc <- data.frame(matrix(ncol=5,nrow=1))
   colnames(electrode_loc) <- c("X_min","Y_min","Y_max","X_tip","Y_tip")
-  electrode_loc$X_min <- min(cluster_coords_data$X[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
-  electrode_loc$Y_min <- min(cluster_coords_data$Y[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
-  electrode_loc$Y_max <- max(cluster_coords_data$Y[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
-  electrode_loc$X_tip <- max(cluster_coords_data$X[which(cluster_coords_data$Clusters_w_Electrode==k+1)])
+  electrode_loc$X_min <- min(cluster_coords_data$X[which(cluster_coords_data$Electrode==1)])
+  electrode_loc$Y_min <- min(cluster_coords_data$Y[which(cluster_coords_data$Electrode==1)])
+  electrode_loc$Y_max <- max(cluster_coords_data$Y[which(cluster_coords_data$Electrode==1)])
+  electrode_loc$X_tip <- max(cluster_coords_data$X[which(cluster_coords_data$Electrode==1)])
   electrode_loc$Y_tip <- (electrode_loc$Y_min + electrode_loc$Y_max)/2
 } else warning("Cannot locate file with electrode pixels.")
 
@@ -260,13 +263,28 @@ write.table(prestim_data,"PreStim_all.txt",row.names = FALSE)
 write.table(amp_data,"Amp_all.txt",row.names = FALSE)
 write.table(snr_coords_data,"SNR_all.txt",row.names = FALSE)
 write.table(cluster_coords_data,"Clusters_all.txt",row.names = FALSE)
-write.table(electrode_loc,"Electrode_coords.txt",row.names = FALSE)
+write.table(electrode_loc,"Electrode_coords.txt",row.names = FALSE,col.names = FALSE)
 
 #save cluster values as xdim by ydim matrix ready for import to Python
 clusters_for_python <- t(matrix(cluster_coords_data$Cluster, ncol=xdim, nrow=ydim))
+clusters_for_python[which(is.na(clusters_for_python))] <- 0
 write.table(clusters_for_python,"Clusters_for_python.txt",row.names = FALSE,col.names = FALSE)
 
-#save cluster values (where electrode is k+1th cluster) as xdim by ydim
-#matrix ready for import to Python
-clusters_w_electrode_for_python <- t(matrix(cluster_coords_data$Clusters_w_Electrode, ncol=xdim, nrow=ydim))
-write.table(clusters_w_electrode_for_python,"Clusters_w_Electrode_for_python.txt",row.names = FALSE,col.names = FALSE)
+#save average SNR values as xdim by ydim matrix ready for import to Python
+snr_for_python <- t(matrix(cluster_coords_data$SNR, ncol=xdim, nrow=ydim))
+snr_for_python[which(is.na(snr_for_python))] <- 0
+write.table(snr_for_python,"SNR_for_python.txt",row.names = FALSE,col.names = FALSE)
+
+#save average SNR values as xdim by ydim matrix ready for import to Python
+snr_for_python <- t(matrix(cluster_coords_data$SNR, ncol=xdim, nrow=ydim))
+write.table(snr_for_python,"SNR_for_python.txt",row.names = FALSE,col.names = FALSE)
+
+#save average amplitude values as xdim by ydim matrix ready for import to Python
+amp_for_python <- t(matrix(amp_data$Avg, ncol=xdim, nrow=ydim))
+write.table(amp_for_python,"Amp_for_python.txt",row.names = FALSE,col.names = FALSE)
+
+#save pixels indicating electrode location (electrode pixel = 1, other pixels
+#= 0 as xdim by ydim matrix ready for import to Python
+Electrode_for_python <- t(matrix(cluster_coords_data$Electrode, ncol=xdim, nrow=ydim))
+Electrode_for_python[which(is.na(Electrode_for_python))] <- 0
+write.table(Electrode_for_python,"Electrode_for_python.txt",row.names = FALSE,col.names = FALSE)

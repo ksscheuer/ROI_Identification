@@ -14,13 +14,13 @@ library(reticulate)
 knitr::knit_engines$set(python = reticulate::eng_python)
 # knitr::opts_chunk$set(python.reticulate = FALSE)
 # knitr::opts_knit$set(root.dir = "COPY WORKING DIRECTORY HERE")
-knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/Wen-chi/Day1/02-01")
+knitr::opts_knit$set(root.dir = "G:/My Drive/Jackson/PhotoZ_data/Step1_ROIs/from Wen-chi/prox/02-01")
 
 k <-  2 #number of clusters chosen by hand based on silhouette plot
 ROI_diameter_cutoff <- 3 #max number of pixels for diameter of ROI
   #ROI_diameter_cutoff = 2 for 10x lens and 3 for 20x lens
 myslice <- "02-01"
-mydate <- "Day 1 02-01"
+mydate <- "Wen-chi, Prox-1"
 SNRcutoff <- 4
 Ampcutoff <- 0.001
 rois_per_dat_file <- 5 #60 makes it crash but 50 works
