@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 np.set_printoptions(suppress=True) #prevent np exponential notation on print
+np.set_printoptions(threshold=np.inf) #print all values in numpy array
 # import pandas
 # import scipy
 # import collections
@@ -173,7 +174,7 @@ electrode_x_min = electrode_coords[0]-1
 electrode_x_max = electrode_coords[3]-1
 electrode_y_max = electrode_coords[2]-1
 electrode_y_min = electrode_coords[1]-1
-print (electrode_x_min,electrode_x_max,electrode_y_min,electrode_y_max)
+# print (electrode_x_min,electrode_x_max,electrode_y_min,electrode_y_max)
 
 rois_touching_electrode = []
 for i in range(0,height):
@@ -183,7 +184,7 @@ for i in range(0,height):
       rois_touching_electrode.append(cell_value)
 
 rois_touching_electrode = np.unique(rois_touching_electrode)
-print (rois_touching_electrode)
+# print (rois_touching_electrode)
 
 for i in range(0,width):
   for j in range(0,height):
@@ -348,55 +349,57 @@ plt.savefig("Final ROIs.jpg")
 ################ Save pixel coordinates of ROIs and electrode ##############
 ############################################################################
 
-np.set_printoptions(threshold=np.inf)
-# print(electrode_data)
-# print(roi_keep)
-
 dat_file_data = np.zeros((width*height,5))
 dat_file_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
 dat_file_data[:,1] = np.repeat(range(height),width) #y coordinates
 dat_file_data[:,2] = list(range(height))*width #y coordinates
 dat_file_data[:,3] = roi_keep_no_electrode.flatten() #final ROI clusters including electrode
 dat_file_data[:,4] = electrode_data.flatten() #pixels in electrode
-# print(dat_file_data)
-# print(type(height),type(width),type)
-# print(list(range(height*width)))
-# print(np.unique(dat_file_data[:,2]))
-# print(np.unique(dat_file_data[:,3]))
-# print(electrode_cluster)
 
 dat_file_data[dat_file_data[:,3] == electrode_cluster,3] = 0 #remove electrode as cluster in column of final ROIs
 dat_file_data[dat_file_data[:,4] == np.amax(electrode_data),4] = 1 #set pixel value to 1 if in electrode
 
-electrode_pixel_ids = dat_file_data[dat_file_data[:,4] == 1,0]
-# print(len(electrode_pixel_ids))
+roi_index = 1
+final_roi_snr_vals = np.delete(np.unique(dat_file_data[:,3]),0)
+for roi in final_roi_snr_vals:
+    # print(roi_index)
+    # print(roi)
+    dat_file_data[dat_file_data[:,3] == roi,3] = roi_index
+    roi_index = roi_index + 1
+    # print(roi_index)
 
+# print(dat_file_data)
+# print(np.unique(dat_file_data[:,3]))
+# print(np.delete(np.unique(dat_file_data[:,3]),0))
+
+electrode_pixel_ids = dat_file_data[dat_file_data[:,4] == 1,0] #list of pixel ids where pixel is in electrode
 electrode_dat_file = np.zeros((4+len(electrode_pixel_ids),1))
 electrode_dat_file[0,0] = 1 #only 1 "ROI" in this file (which is the electrode)
 electrode_dat_file[1,0] = 0
-electrode_dat_file[2,0] = len(electrode_pixel_ids)
+electrode_dat_file[2,0] = len(electrode_pixel_ids) #number of pixels in electrode
 electrode_dat_file[3,0] = 0
-electrode_dat_file[4:len(electrode_pixel_ids)+4,0] = electrode_pixel_ids
+electrode_dat_file[4:len(electrode_pixel_ids)+4,0] = electrode_pixel_ids #pixel ides for pixels in electrode
 np.savetxt("electrode.dat",electrode_dat_file,fmt="%i") #save dat file for electrode with values as integers
 
 
+# 1+3*np.amax(dat_file_data[:,3])
+all_rois_dat_file = np.zeros((1+3*int(np.amax(dat_file_data[:,3]))+len(dat_file_data[dat_file_data[:,3] != 0]),1))
+all_rois_dat_file[0,0] = np.amax(dat_file_data[:,3])
+# print(np.delete(np.unique(dat_file_data[:,3]),0))
+start_row_index = 1
+for roi_index in np.delete(np.unique(dat_file_data[:,3]),0):
 
-# print(np.unique(electrode_data))
-# print(np.amax(electrode_data))
-# print(electrode_data.tolist())
-# print(electrode_data.flatten())
-# dat_file_electrode = np.zeros((,1))
-# dat_file_electrode[0,0] = 1 #one ROI in .dat file for electrode
-# dat_file_electrode[1,0] = 0 #first ROI in .dat file for electrode
-# dat_file_electrode[3,0] = 0 #first ROI in .dat file for electrode
+# roi_index = 1
+    roi_index = int(roi_index)
+    roi_n_pixels = len(dat_file_data[dat_file_data[:,3]==roi_index])
+    all_rois_dat_file[start_row_index,0] = roi_index-1
+    all_rois_dat_file[start_row_index+2, 0] = roi_index-1
+    # print(roi_index)
+    # print(len(dat_file_data[dat_file_data[:,3]==roi_index]))
+    all_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+    all_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = dat_file_data[dat_file_data[:,3]==roi_index,0]
+    start_row_index = start_row_index+2+roi_n_pixels+1
 
+print(all_rois_dat_file)
 
-
-# dat_file_electrode <- data.frame(matrix(ncol=1,nrow=3*nROIs+1+nrow(final_rois)))
-# colnames(dat_file_electrode) <- NULL
-# dat_file_electrode[1,1] <- 1
-# row_id <- 2
-# dat_file_electrode[c(row_id,(row_id+2)),1] <- 0
-# dat_file_electrode[(row_id+1),1] <- length(which(final_rois$ROI_ID==0))+1
-# dat_file_electrode[c((row_id+3):(row_id+2+length(which(final_rois$ROI_ID==0)))),1] <- (final_rois$Pixel_ID[which(final_rois$ROI_ID==0)])-1
-# write.table(dat_file_electrode,"electrode.dat",row.names = FALSE)
+np.savetxt("all_rois.dat",all_rois_dat_file,fmt="%i")
