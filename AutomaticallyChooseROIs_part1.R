@@ -92,7 +92,7 @@ if (SNRcutoff_choice == "pre-stim mean") {
     geom_vline(xintercept=SNRcutoff) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
-  ggsave("SNRcutoff.jpg")
+  ggsave("Step1_SNR_Cutoff.jpg")
 } else if (SNRcutoff_choice == "pre-stim 95%ile") {
   SNRcutoff <- qnorm(0.95,mean=mean(prestim_data$Avg),sd=sd(prestim_data$Avg))
   ggplot(prestim_data,aes(x=Avg)) +
@@ -101,7 +101,7 @@ if (SNRcutoff_choice == "pre-stim mean") {
     geom_vline(xintercept=SNRcutoff) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
-  ggsave("SNRcutoff.jpg")
+  ggsave("Step1_SNR_Cutoff.jpg")
 } else if (SNRcutoff_choice == "pre-stim max") {
   SNRcutoff <- max(prestim_data$Avg)
   ggplot(prestim_data,aes(x=Avg)) +
@@ -110,7 +110,7 @@ if (SNRcutoff_choice == "pre-stim mean") {
     geom_vline(xintercept=SNRcutoff) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
-  ggsave("SNRcutoff.jpg")
+  ggsave("Step1_SNR_Cutoff.jpg")
 } else if (SNRcutoff_choice == "RMS") {
   SNRcutoff <- sqrt(mean(prestim_data$Avg^2))
   ggplot(prestim_data,aes(x=Avg)) +
@@ -119,7 +119,7 @@ if (SNRcutoff_choice == "pre-stim mean") {
     geom_vline(xintercept=SNRcutoff) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
-  ggsave("SNRcutoff.jpg")
+  ggsave("Step1_SNR_Cutoff.jpg")
 } else {
   SNRcutoff <- SNRcutoff_choice
   ggplot(prestim_data,aes(x=Avg)) +
@@ -128,7 +128,7 @@ if (SNRcutoff_choice == "pre-stim mean") {
     geom_vline(xintercept=SNRcutoff) +
     theme_bw() +
     theme(plot.title = element_text(hjust = 0.5))
-  ggsave("SNRcutoff.jpg")
+  ggsave("Step1_SNR_Cutoff.jpg")
 }
 
 ############################## Plot SNR ####################################
@@ -154,7 +154,7 @@ for (i in 3:ncol(snr_data)+2) {
     scale_fill_gradientn(colors=rev(c(
       "red1","yellow1","green1","dodgerblue1","navy"))
     )
-  ggsave(paste("SNR_",colnames(snr_coords_data)[i],".jpg",sep=""),width=6.5,height=6)
+  ggsave(paste("Step1_SNR_",colnames(snr_coords_data)[i],".jpg",sep=""),width=6.5,height=6)
 }
 
 snr_coords_data["Avg_cutoff"] <- snr_coords_data$Avg
@@ -167,7 +167,7 @@ for (i in 1:nrow(snr_coords_data)) {
 #plot SNR values for average, excluding pixels where SNR < cutoff
 ggplot(snr_coords_data,aes(x=X,y=Y)) +
   geom_tile(aes(fill=Avg_cutoff)) +
-  labs("SNR > Cutoff") +
+  labs(title=paste("SNR > Cutoff of ",round(SNRcutoff,3))) +
   theme(
     axis.title.y = element_blank(),
     axis.title.x = element_blank(),
@@ -181,7 +181,7 @@ ggplot(snr_coords_data,aes(x=X,y=Y)) +
   scale_fill_gradientn(colors=rev(c(
     "red1","yellow1","green1","dodgerblue1","navy"))
   )
-ggsave(paste("SNR_above_cutoff.jpg"),width=6.5,height=6)
+ggsave(paste("Step1_SNR_Over_Cutoff.jpg"),width=6.5,height=6)
 
 ################# One-dimensional K-means clustering #######################
 ############################################################################
@@ -217,7 +217,7 @@ for (i in 1:nrow(cluster_coords_data)) {
 #plot clusters
 ggplot(cluster_coords_data,aes(x=X,y=Y)) +
   geom_tile(aes(fill=Cluster)) +
-  labs(title="Clusters") +
+  labs(title=paste("Clusters = ",k)) +
   theme(
     axis.title.y = element_blank(),
     axis.title.x = element_blank(),
@@ -232,7 +232,7 @@ ggplot(cluster_coords_data,aes(x=X,y=Y)) +
     colors=rev(c(
     "red1","yellow1","green1","dodgerblue1","navy"))
   )
-ggsave("Clusters.jpg",width=6.5,height=6)
+ggsave("Step2_Clusters.jpg",width=6.5,height=6)
 
 ###################### Indicate electrode location #########################
 ############################################################################
