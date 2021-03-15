@@ -587,6 +587,7 @@ for (i in 1:length(unique_SNR_no_electrode)) {
 }
 
 nROIs <- max(final_rois$ROI_ID)+1
+
 dat_file_electrode <- data.frame(matrix(ncol=1,nrow=3*nROIs+1+nrow(final_rois)))
 colnames(dat_file_electrode) <- NULL
 dat_file_electrode[1,1] <- 1

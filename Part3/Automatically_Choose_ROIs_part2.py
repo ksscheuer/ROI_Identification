@@ -12,7 +12,7 @@ np.set_printoptions(threshold=np.inf) #print all values in numpy array
 ROI_diameter_cutoff = 3
 SNR_cutoff = 3.8
 Amp_cutoff = 0.001
-Dat_all_potential = True #if true, will produce .dat files for all potential ROIs
+Dat_all_potential = False #if true, will produce .dat files for all potential ROIs
 Dat_diameter = True #if true, will produce .dat files for all ROIs with diameter <= cutoff
 Dat_not_touching = True #if true, will produce .dat files for all ROIs not touching
 Dat_snr_cutoff = True #if true, will produce .dat files for all ROIs with SNR > cutoff
@@ -96,42 +96,91 @@ plt.title("All Potential ROIs, Clusters: %d" % (k), fontsize=13)
 # plt.show()
 plt.savefig("All_Potential_ROIs.jpg")
 
-if Dat_all_potential == True:
-    dat_file_all_potential_rois_data = np.zeros((width*height,4))
-    dat_file_all_potential_rois_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-    dat_file_all_potential_rois_data[:,1] = np.repeat(range(height),width) #y coordinates
-    dat_file_all_potential_rois_data[:,2] = list(range(height))*width #y coordinates
-    dat_file_all_potential_rois_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+#trace_data = cluster_results
+def produce_dat_files(width,height,trace_data,n_rois_per_file,dat_file_name):
+    dat_file_data = np.zeros((width * height, 4))
+    dat_file_data[:, 0] = range(height * width)  # list of pixel IDs from 0 to width*height-1
+    dat_file_data[:, 1] = np.repeat(range(height), width)  # x coordinates
+    dat_file_data[:, 2] = list(range(height)) * width  # y coordinates
+    dat_file_data[:, 3] = trace_data.flatten()  #data to be flattened from height x width df to column
 
     roi_index = 1
-    final_roi_snr_vals = np.delete(np.unique(dat_file_all_potential_rois_data[:,3]),0)
-    for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-        dat_file_all_potential_rois_data[dat_file_all_potential_rois_data[:,3] == roi,3] = roi_index
+    final_roi_snr_vals = np.delete(np.unique(dat_file_data[:, 3]), 0)
+    for roi in final_roi_snr_vals:  # change ROI cluster values to be indexes not SNR values
+        dat_file_data[dat_file_data[:, 3] == roi, 3] = roi_index
         roi_index = roi_index + 1
 
-    n_rois_per_file = 50
-    all_roi_indexes_list = range(1,int(np.amax(dat_file_all_potential_rois_data[:,3]))+1)
+    # n_rois_per_file = 50
+    all_roi_indexes_list = range(1, int(np.amax(dat_file_data[:, 3])) + 1)
 
-    roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+    roi_index_groups = [all_roi_indexes_list[i * n_rois_per_file:(i + 1) * n_rois_per_file] for i in
+                        range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
     for group in roi_index_groups:
-        group_dat_file_data = np.empty([0,4])
-        for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-            roi_index_dat_file_all_potential_rois_data = dat_file_all_potential_rois_data[dat_file_all_potential_rois_data[:,3]==roi_index,:]
-            group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_all_potential_rois_data])
-        group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-        group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+        group_dat_file_data = np.empty([0, 4])
+        for roi_index in group:  # get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+            roi_index_dat_file_data = dat_file_data[dat_file_data[:, 3] == roi_index, :]
+            group_dat_file_data = np.vstack([group_dat_file_data, roi_index_dat_file_data])
+        group_rois_dat_file = np.zeros((1 + 3 * int(np.amax(group_dat_file_data[:, 3])) + len(
+            group_dat_file_data[group_dat_file_data[:, 3] != 0]), 1))
+        group_rois_dat_file[0, 0] = np.amax(group_dat_file_data[:, 3])
         group_rois_dat_list = group
         start_row_index = 1
         for roi_index in group_rois_dat_list:
             roi_index = int(roi_index)
-            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-            group_rois_dat_file[start_row_index,0] = roi_index-1
-            group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-            group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-            group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-            start_row_index = start_row_index+2+roi_n_pixels+1
-        np.savetxt("All_Potential_ROIs_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:, 3] == roi_index])
+            group_rois_dat_file[start_row_index, 0] = roi_index - 1
+            group_rois_dat_file[start_row_index + 2, 0] = roi_index - 1
+            group_rois_dat_file[start_row_index + 1, 0] = roi_n_pixels + 1
+            group_rois_dat_file[start_row_index + 3:start_row_index + 3 + roi_n_pixels, 0] = group_dat_file_data[
+                group_dat_file_data[:, 3] == roi_index, 0]
+            start_row_index = start_row_index + 2 + roi_n_pixels + 1
+        np.savetxt(dat_file_name + str(min(group)) + "_to_" + str(max(group)) + ".dat", group_rois_dat_file,
+                   fmt="%i")
 
+
+
+
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="All_Potential_ROIs_")
+
+
+#
+#
+# # if Dat_all_potential == True:
+# #     dat_file_all_potential_rois_data = np.zeros((width*height,4))
+# #     dat_file_all_potential_rois_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+# #     dat_file_all_potential_rois_data[:,1] = np.repeat(range(height),width) #y coordinates
+# #     dat_file_all_potential_rois_data[:,2] = list(range(height))*width #y coordinates
+# #     dat_file_all_potential_rois_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+# #
+# #     roi_index = 1
+# #     final_roi_snr_vals = np.delete(np.unique(dat_file_all_potential_rois_data[:,3]),0)
+# #     for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+# #         dat_file_all_potential_rois_data[dat_file_all_potential_rois_data[:,3] == roi,3] = roi_index
+# #         roi_index = roi_index + 1
+# #
+# #     n_rois_per_file = 50
+# #     all_roi_indexes_list = range(1,int(np.amax(dat_file_all_potential_rois_data[:,3]))+1)
+# #
+# #     roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+# #     for group in roi_index_groups:
+# #         group_dat_file_data = np.empty([0,4])
+# #         for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+# #             roi_index_dat_file_all_potential_rois_data = dat_file_all_potential_rois_data[dat_file_all_potential_rois_data[:,3]==roi_index,:]
+# #             group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_all_potential_rois_data])
+# #         group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+# #         group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+# #         group_rois_dat_list = group
+# #         start_row_index = 1
+# #         for roi_index in group_rois_dat_list:
+# #             roi_index = int(roi_index)
+# #             roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+# #             group_rois_dat_file[start_row_index,0] = roi_index-1
+# #             group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+# #             group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+# #             group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+# #             start_row_index = start_row_index+2+roi_n_pixels+1
+# #         np.savetxt("All_Potential_ROIs_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+#
 ############# Remove ROIs with diameter greater than cutoff ################
 ############################################################################
 
@@ -153,42 +202,47 @@ plt.title("ROIs with Diameter < %d" % (ROI_diameter_cutoff),fontsize=13)
 # plt.show()
 plt.savefig("ROIS_Diameter_Within_Cutoff.jpg")
 
-if Dat_diameter == True:
-    dat_file_diameter_cutoff_rois_data = np.zeros((width*height,4))
-    dat_file_diameter_cutoff_rois_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-    dat_file_diameter_cutoff_rois_data[:,1] = np.repeat(range(height),width) #y coordinates
-    dat_file_diameter_cutoff_rois_data[:,2] = list(range(height))*width #y coordinates
-    dat_file_diameter_cutoff_rois_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Diameter_Within_Cutoff_")
 
-    roi_index = 1
-    final_roi_snr_vals = np.delete(np.unique(dat_file_diameter_cutoff_rois_data[:,3]),0)
-    for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-        dat_file_diameter_cutoff_rois_data[dat_file_diameter_cutoff_rois_data[:,3] == roi,3] = roi_index
-        roi_index = roi_index + 1
 
-    n_rois_per_file = 50
-    all_roi_indexes_list = range(1,int(np.amax(dat_file_diameter_cutoff_rois_data[:,3]))+1)
 
-    roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
-    for group in roi_index_groups:
-        group_dat_file_data = np.empty([0,4])
-        for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-            roi_index_dat_file_diameter_cutoff_rois_data = dat_file_diameter_cutoff_rois_data[dat_file_diameter_cutoff_rois_data[:,3]==roi_index,:]
-            group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_diameter_cutoff_rois_data])
-        group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-        group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
-        group_rois_dat_list = group
-        start_row_index = 1
-        for roi_index in group_rois_dat_list:
-            roi_index = int(roi_index)
-            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-            group_rois_dat_file[start_row_index,0] = roi_index-1
-            group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-            group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-            group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-            start_row_index = start_row_index+2+roi_n_pixels+1
-        np.savetxt("ROIs_Diameter_Within_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
 
+# if Dat_diameter == True:
+#     dat_file_diameter_cutoff_rois_data = np.zeros((width*height,4))
+#     dat_file_diameter_cutoff_rois_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+#     dat_file_diameter_cutoff_rois_data[:,1] = np.repeat(range(height),width) #y coordinates
+#     dat_file_diameter_cutoff_rois_data[:,2] = list(range(height))*width #y coordinates
+#     dat_file_diameter_cutoff_rois_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+#
+#     roi_index = 1
+#     final_roi_snr_vals = np.delete(np.unique(dat_file_diameter_cutoff_rois_data[:,3]),0)
+#     for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+#         dat_file_diameter_cutoff_rois_data[dat_file_diameter_cutoff_rois_data[:,3] == roi,3] = roi_index
+#         roi_index = roi_index + 1
+#
+#     n_rois_per_file = 50
+#     all_roi_indexes_list = range(1,int(np.amax(dat_file_diameter_cutoff_rois_data[:,3]))+1)
+#
+#     roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+#     for group in roi_index_groups:
+#         group_dat_file_data = np.empty([0,4])
+#         for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+#             roi_index_dat_file_diameter_cutoff_rois_data = dat_file_diameter_cutoff_rois_data[dat_file_diameter_cutoff_rois_data[:,3]==roi_index,:]
+#             group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_diameter_cutoff_rois_data])
+#         group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+#         group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+#         group_rois_dat_list = group
+#         start_row_index = 1
+#         for roi_index in group_rois_dat_list:
+#             roi_index = int(roi_index)
+#             roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+#             group_rois_dat_file[start_row_index,0] = roi_index-1
+#             group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#             group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#             group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+#             start_row_index = start_row_index+2+roi_n_pixels+1
+#         np.savetxt("ROIs_Diameter_Within_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+#
 ################ Separate remaining ROIs based on cluster ##################
 ############################################################################
 
@@ -291,42 +345,44 @@ plt.title("ROIs not Touching",fontsize=13)
 # plt.show()
 plt.savefig("ROIs_Not_Touching.jpg")
 
-if Dat_not_touching == True:
-    dat_file_not_touching_data = np.zeros((width*height,4))
-    dat_file_not_touching_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-    dat_file_not_touching_data[:,1] = np.repeat(range(height),width) #y coordinates
-    dat_file_not_touching_data[:,2] = list(range(height))*width #y coordinates
-    dat_file_not_touching_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Not_Touching_")
 
-    roi_index = 1
-    final_roi_snr_vals = np.delete(np.unique(dat_file_not_touching_data[:,3]),0)
-    for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-        dat_file_not_touching_data[dat_file_not_touching_data[:,3] == roi,3] = roi_index
-        roi_index = roi_index + 1
-
-    n_rois_per_file = 50
-    all_roi_indexes_list = range(1,int(np.amax(dat_file_not_touching_data[:,3]))+1)
-
-    roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
-    for group in roi_index_groups:
-        group_dat_file_data = np.empty([0,4])
-        for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-            roi_index_dat_file_not_touching_data = dat_file_not_touching_data[dat_file_not_touching_data[:,3]==roi_index,:]
-            group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_not_touching_data])
-        group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-        group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
-        group_rois_dat_list = group
-        start_row_index = 1
-        for roi_index in group_rois_dat_list:
-            roi_index = int(roi_index)
-            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-            group_rois_dat_file[start_row_index,0] = roi_index-1
-            group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-            group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-            group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-            start_row_index = start_row_index+2+roi_n_pixels+1
-        np.savetxt("ROIs_Not_Touching_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
-
+# if Dat_not_touching == True:
+#     dat_file_not_touching_data = np.zeros((width*height,4))
+#     dat_file_not_touching_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+#     dat_file_not_touching_data[:,1] = np.repeat(range(height),width) #y coordinates
+#     dat_file_not_touching_data[:,2] = list(range(height))*width #y coordinates
+#     dat_file_not_touching_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+#
+#     roi_index = 1
+#     final_roi_snr_vals = np.delete(np.unique(dat_file_not_touching_data[:,3]),0)
+#     for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+#         dat_file_not_touching_data[dat_file_not_touching_data[:,3] == roi,3] = roi_index
+#         roi_index = roi_index + 1
+#
+#     n_rois_per_file = 50
+#     all_roi_indexes_list = range(1,int(np.amax(dat_file_not_touching_data[:,3]))+1)
+#
+#     roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+#     for group in roi_index_groups:
+#         group_dat_file_data = np.empty([0,4])
+#         for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+#             roi_index_dat_file_not_touching_data = dat_file_not_touching_data[dat_file_not_touching_data[:,3]==roi_index,:]
+#             group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_not_touching_data])
+#         group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+#         group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+#         group_rois_dat_list = group
+#         start_row_index = 1
+#         for roi_index in group_rois_dat_list:
+#             roi_index = int(roi_index)
+#             roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+#             group_rois_dat_file[start_row_index,0] = roi_index-1
+#             group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#             group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#             group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+#             start_row_index = start_row_index+2+roi_n_pixels+1
+#         np.savetxt("ROIs_Not_Touching_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+#
 ################## Keep ROIS > SNR Cutoff ##################################
 ############################################################################
 
@@ -355,42 +411,44 @@ plt.title("ROIs with SNR > Cutoff",fontsize=13)
 # plt.show()
 plt.savefig("ROIs_With_SNR_Greater_Than_Cutoff.jpg")
 
-if Dat_snr_cutoff == True:
-    dat_file_greater_than_snr_cutoff_data = np.zeros((width*height,4))
-    dat_file_greater_than_snr_cutoff_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-    dat_file_greater_than_snr_cutoff_data[:,1] = np.repeat(range(height),width) #y coordinates
-    dat_file_greater_than_snr_cutoff_data[:,2] = list(range(height))*width #y coordinates
-    dat_file_greater_than_snr_cutoff_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_Greater_Than_Cutoff_")
 
-    roi_index = 1
-    final_roi_snr_vals = np.delete(np.unique(dat_file_greater_than_snr_cutoff_data[:,3]),0)
-    for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-        dat_file_greater_than_snr_cutoff_data[dat_file_greater_than_snr_cutoff_data[:,3] == roi,3] = roi_index
-        roi_index = roi_index + 1
-
-    n_rois_per_file = 50
-    all_roi_indexes_list = range(1,int(np.amax(dat_file_greater_than_snr_cutoff_data[:,3]))+1)
-
-    roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
-    for group in roi_index_groups:
-        group_dat_file_data = np.empty([0,4])
-        for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-            roi_index_dat_file_greater_than_snr_cutoff_data = dat_file_greater_than_snr_cutoff_data[dat_file_greater_than_snr_cutoff_data[:,3]==roi_index,:]
-            group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_greater_than_snr_cutoff_data])
-        group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-        group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
-        group_rois_dat_list = group
-        start_row_index = 1
-        for roi_index in group_rois_dat_list:
-            roi_index = int(roi_index)
-            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-            group_rois_dat_file[start_row_index,0] = roi_index-1
-            group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-            group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-            group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-            start_row_index = start_row_index+2+roi_n_pixels+1
-        np.savetxt("ROIs_With_SNR_Greater_Than_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
-
+# if Dat_snr_cutoff == True:
+#     dat_file_greater_than_snr_cutoff_data = np.zeros((width*height,4))
+#     dat_file_greater_than_snr_cutoff_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+#     dat_file_greater_than_snr_cutoff_data[:,1] = np.repeat(range(height),width) #y coordinates
+#     dat_file_greater_than_snr_cutoff_data[:,2] = list(range(height))*width #y coordinates
+#     dat_file_greater_than_snr_cutoff_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+#
+#     roi_index = 1
+#     final_roi_snr_vals = np.delete(np.unique(dat_file_greater_than_snr_cutoff_data[:,3]),0)
+#     for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+#         dat_file_greater_than_snr_cutoff_data[dat_file_greater_than_snr_cutoff_data[:,3] == roi,3] = roi_index
+#         roi_index = roi_index + 1
+#
+#     n_rois_per_file = 50
+#     all_roi_indexes_list = range(1,int(np.amax(dat_file_greater_than_snr_cutoff_data[:,3]))+1)
+#
+#     roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+#     for group in roi_index_groups:
+#         group_dat_file_data = np.empty([0,4])
+#         for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+#             roi_index_dat_file_greater_than_snr_cutoff_data = dat_file_greater_than_snr_cutoff_data[dat_file_greater_than_snr_cutoff_data[:,3]==roi_index,:]
+#             group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_greater_than_snr_cutoff_data])
+#         group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+#         group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+#         group_rois_dat_list = group
+#         start_row_index = 1
+#         for roi_index in group_rois_dat_list:
+#             roi_index = int(roi_index)
+#             roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+#             group_rois_dat_file[start_row_index,0] = roi_index-1
+#             group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#             group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#             group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+#             start_row_index = start_row_index+2+roi_n_pixels+1
+#         np.savetxt("ROIs_With_SNR_Greater_Than_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+#
 ################## Keep ROIS > Amp Cutoff ##################################
 ############################################################################
 
@@ -418,42 +476,44 @@ plt.title("ROIs with Amplitude > Cutoff",fontsize=13)
 # plt.show()
 plt.savefig("ROIs_With_Amp_Greater_Than_Cutoff.jpg")
 
-if Dat_amp_cutoff == True:
-    dat_file_greater_than_amp_cutoff_data = np.zeros((width*height,4))
-    dat_file_greater_than_amp_cutoff_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-    dat_file_greater_than_amp_cutoff_data[:,1] = np.repeat(range(height),width) #y coordinates
-    dat_file_greater_than_amp_cutoff_data[:,2] = list(range(height))*width #y coordinates
-    dat_file_greater_than_amp_cutoff_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_Amp_Greater_Than_Cutoff_")
 
-    roi_index = 1
-    final_roi_snr_vals = np.delete(np.unique(dat_file_greater_than_amp_cutoff_data[:,3]),0)
-    for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-        dat_file_greater_than_amp_cutoff_data[dat_file_greater_than_amp_cutoff_data[:,3] == roi,3] = roi_index
-        roi_index = roi_index + 1
-
-    n_rois_per_file = 50
-    all_roi_indexes_list = range(1,int(np.amax(dat_file_greater_than_amp_cutoff_data[:,3]))+1)
-
-    roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
-    for group in roi_index_groups:
-        group_dat_file_data = np.empty([0,4])
-        for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-            roi_index_dat_file_greater_than_amp_cutoff_data = dat_file_greater_than_amp_cutoff_data[dat_file_greater_than_amp_cutoff_data[:,3]==roi_index,:]
-            group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_greater_than_amp_cutoff_data])
-        group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-        group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
-        group_rois_dat_list = group
-        start_row_index = 1
-        for roi_index in group_rois_dat_list:
-            roi_index = int(roi_index)
-            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-            group_rois_dat_file[start_row_index,0] = roi_index-1
-            group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-            group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-            group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-            start_row_index = start_row_index+2+roi_n_pixels+1
-        np.savetxt("ROIs_With_Amp_Greater_Than_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
-
+# if Dat_amp_cutoff == True:
+#     dat_file_greater_than_amp_cutoff_data = np.zeros((width*height,4))
+#     dat_file_greater_than_amp_cutoff_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+#     dat_file_greater_than_amp_cutoff_data[:,1] = np.repeat(range(height),width) #y coordinates
+#     dat_file_greater_than_amp_cutoff_data[:,2] = list(range(height))*width #y coordinates
+#     dat_file_greater_than_amp_cutoff_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+#
+#     roi_index = 1
+#     final_roi_snr_vals = np.delete(np.unique(dat_file_greater_than_amp_cutoff_data[:,3]),0)
+#     for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+#         dat_file_greater_than_amp_cutoff_data[dat_file_greater_than_amp_cutoff_data[:,3] == roi,3] = roi_index
+#         roi_index = roi_index + 1
+#
+#     n_rois_per_file = 50
+#     all_roi_indexes_list = range(1,int(np.amax(dat_file_greater_than_amp_cutoff_data[:,3]))+1)
+#
+#     roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+#     for group in roi_index_groups:
+#         group_dat_file_data = np.empty([0,4])
+#         for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+#             roi_index_dat_file_greater_than_amp_cutoff_data = dat_file_greater_than_amp_cutoff_data[dat_file_greater_than_amp_cutoff_data[:,3]==roi_index,:]
+#             group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_greater_than_amp_cutoff_data])
+#         group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+#         group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+#         group_rois_dat_list = group
+#         start_row_index = 1
+#         for roi_index in group_rois_dat_list:
+#             roi_index = int(roi_index)
+#             roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+#             group_rois_dat_file[start_row_index,0] = roi_index-1
+#             group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#             group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#             group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+#             start_row_index = start_row_index+2+roi_n_pixels+1
+#         np.savetxt("ROIs_With_Amp_Greater_Than_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+#
 ############## Keep ROIS > Amp Cutoff and > SNR Cutoff #####################
 ############################################################################
 
@@ -471,44 +531,49 @@ plt.title("ROIs with SNR and Amplitude > Cutoff",fontsize=13)
 # plt.show()
 plt.savefig("ROIs_With_SNR_Amp_Greater_Than_Cutoff.jpg")
 
-if Dat_snr_amp_cutoff == True:
-    dat_file_greater_than_snr_amp_cutoff_data = np.zeros((width*height,4))
-    dat_file_greater_than_snr_amp_cutoff_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-    dat_file_greater_than_snr_amp_cutoff_data[:,1] = np.repeat(range(height),width) #y coordinates
-    dat_file_greater_than_snr_amp_cutoff_data[:,2] = list(range(height))*width #y coordinates
-    dat_file_greater_than_snr_amp_cutoff_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_And_Amp_Greater_Than_Cutoff_")
 
-    roi_index = 1
-    final_roi_snr_vals = np.delete(np.unique(dat_file_greater_than_snr_amp_cutoff_data[:,3]),0)
-    for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-        dat_file_greater_than_snr_amp_cutoff_data[dat_file_greater_than_snr_amp_cutoff_data[:,3] == roi,3] = roi_index
-        roi_index = roi_index + 1
-
-    n_rois_per_file = 50
-    all_roi_indexes_list = range(1,int(np.amax(dat_file_greater_than_snr_amp_cutoff_data[:,3]))+1)
-
-    roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
-    for group in roi_index_groups:
-        group_dat_file_data = np.empty([0,4])
-        for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-            roi_index_dat_file_greater_than_snr_amp_cutoff_data = dat_file_greater_than_snr_amp_cutoff_data[dat_file_greater_than_snr_amp_cutoff_data[:,3]==roi_index,:]
-            group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_greater_than_snr_amp_cutoff_data])
-        group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-        group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
-        group_rois_dat_list = group
-        start_row_index = 1
-        for roi_index in group_rois_dat_list:
-            roi_index = int(roi_index)
-            roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-            group_rois_dat_file[start_row_index,0] = roi_index-1
-            group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-            group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-            group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-            start_row_index = start_row_index+2+roi_n_pixels+1
-        np.savetxt("ROIs_With_SNR_And_Amp_Greater_Than_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
-
+# if Dat_snr_amp_cutoff == True:
+#     dat_file_greater_than_snr_amp_cutoff_data = np.zeros((width*height,4))
+#     dat_file_greater_than_snr_amp_cutoff_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+#     dat_file_greater_than_snr_amp_cutoff_data[:,1] = np.repeat(range(height),width) #y coordinates
+#     dat_file_greater_than_snr_amp_cutoff_data[:,2] = list(range(height))*width #y coordinates
+#     dat_file_greater_than_snr_amp_cutoff_data[:,3] = cluster_results.flatten() #final ROI clusters including electrode
+#
+#     roi_index = 1
+#     final_roi_snr_vals = np.delete(np.unique(dat_file_greater_than_snr_amp_cutoff_data[:,3]),0)
+#     for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+#         dat_file_greater_than_snr_amp_cutoff_data[dat_file_greater_than_snr_amp_cutoff_data[:,3] == roi,3] = roi_index
+#         roi_index = roi_index + 1
+#
+#     n_rois_per_file = 50
+#     all_roi_indexes_list = range(1,int(np.amax(dat_file_greater_than_snr_amp_cutoff_data[:,3]))+1)
+#
+#     roi_index_groups = [all_roi_indexes_list[i*n_rois_per_file:(i + 1)*n_rois_per_file] for i in range((len(all_roi_indexes_list) + n_rois_per_file - 1) // n_rois_per_file)]
+#     for group in roi_index_groups:
+#         group_dat_file_data = np.empty([0,4])
+#         for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+#             roi_index_dat_file_greater_than_snr_amp_cutoff_data = dat_file_greater_than_snr_amp_cutoff_data[dat_file_greater_than_snr_amp_cutoff_data[:,3]==roi_index,:]
+#             group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_greater_than_snr_amp_cutoff_data])
+#         group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+#         group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+#         group_rois_dat_list = group
+#         start_row_index = 1
+#         for roi_index in group_rois_dat_list:
+#             roi_index = int(roi_index)
+#             roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+#             group_rois_dat_file[start_row_index,0] = roi_index-1
+#             group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#             group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#             group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+#             start_row_index = start_row_index+2+roi_n_pixels+1
+#         np.savetxt("ROIs_With_SNR_And_Amp_Greater_Than_Cutoff_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+#
 ######################### Replot electrode #################################
 ############################################################################
+
+produce_dat_files(width=width,height=height,trace_data=roi_keep,n_rois_per_file=50,dat_file_name="ROIs_")
+produce_dat_files(width=width,height=height,trace_data=electrode_data,n_rois_per_file=1,dat_file_name="Electrode")
 
 for i in range(0,width): #add electrode as new "roi"
   for j in range(0,height):
@@ -520,64 +585,65 @@ plt.title("Final ROIs with Electrode",fontsize=13)
 # plt.show()
 plt.savefig("Final ROIs.jpg")
 
-########### Save pixel coordinates of final ROIs and electrode #############
-############################################################################
 
-dat_file_data = np.zeros((width*height,5))
-dat_file_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
-dat_file_data[:,1] = np.repeat(range(height),width) #y coordinates
-dat_file_data[:,2] = list(range(height))*width #y coordinates
-dat_file_data[:,3] = roi_keep_no_electrode.flatten() #final ROI clusters including electrode
-dat_file_data[:,4] = electrode_data.flatten() #pixels in electrode
-
-dat_file_data[dat_file_data[:,3] == electrode_cluster,3] = 0 #remove electrode as cluster in column of final ROIs
-dat_file_data[dat_file_data[:,4] == np.amax(electrode_data),4] = 1 #set pixel value to 1 if in electrode
-
-roi_index = 1
-final_roi_snr_vals = np.delete(np.unique(dat_file_data[:,3]),0)
-for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
-    dat_file_data[dat_file_data[:,3] == roi,3] = roi_index
-    roi_index = roi_index + 1
-
-electrode_pixel_ids = dat_file_data[dat_file_data[:,4] == 1,0] #list of pixel ids where pixel is in electrode
-electrode_dat_file = np.zeros((4+len(electrode_pixel_ids),1))
-electrode_dat_file[0,0] = 1 #only 1 "ROI" in this file (which is the electrode)
-electrode_dat_file[1,0] = 0
-electrode_dat_file[2,0] = len(electrode_pixel_ids) #number of pixels in electrode
-electrode_dat_file[3,0] = 0
-electrode_dat_file[4:len(electrode_pixel_ids)+4,0] = electrode_pixel_ids #pixel ides for pixels in electrode
-np.savetxt("electrode.dat",electrode_dat_file,fmt="%i") #save dat file for electrode with values as integers
-
-all_rois_dat_file = np.zeros((1+3*int(np.amax(dat_file_data[:,3]))+len(dat_file_data[dat_file_data[:,3] != 0]),1))
-all_rois_dat_file[0,0] = np.amax(dat_file_data[:,3])
-all_roi_indexes_list = range(1,int(np.amax(dat_file_data[:,3]))+1)
-start_row_index = 1
-for roi_index in all_roi_indexes_list:
-    roi_index = int(roi_index)
-    roi_n_pixels = len(dat_file_data[dat_file_data[:,3]==roi_index])
-    all_rois_dat_file[start_row_index,0] = roi_index-1
-    all_rois_dat_file[start_row_index+2, 0] = roi_index-1
-    all_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-    all_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = dat_file_data[dat_file_data[:,3]==roi_index,0]
-    start_row_index = start_row_index+2+roi_n_pixels+1
-np.savetxt("ROIs_all.dat",all_rois_dat_file,fmt="%i")
-
-roi_index_groups = [all_roi_indexes_list[i*5:(i + 1)*5] for i in range((len(all_roi_indexes_list) + 5 - 1) // 5)]
-for group in roi_index_groups:
-    group_dat_file_data = np.empty([0,5])
-    for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
-        roi_index_dat_file_data = dat_file_data[dat_file_data[:,3]==roi_index,:]
-        group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_data])
-    group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
-    group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
-    group_rois_dat_list = group
-    start_row_index = 1
-    for roi_index in group_rois_dat_list:
-        roi_index = int(roi_index)
-        roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
-        group_rois_dat_file[start_row_index,0] = roi_index-1
-        group_rois_dat_file[start_row_index+2, 0] = roi_index-1
-        group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
-        group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
-        start_row_index = start_row_index+2+roi_n_pixels+1
-    np.savetxt("ROIs_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
+# ########### Save pixel coordinates of final ROIs and electrode #############
+# ############################################################################
+#
+# dat_file_data = np.zeros((width*height,5))
+# dat_file_data[:,0] = range(height*width) #list of pixel IDs from 0 to width*height-1
+# dat_file_data[:,1] = np.repeat(range(height),width) #y coordinates
+# dat_file_data[:,2] = list(range(height))*width #y coordinates
+# dat_file_data[:,3] = roi_keep_no_electrode.flatten() #final ROI clusters including electrode
+# dat_file_data[:,4] = electrode_data.flatten() #pixels in electrode
+#
+# dat_file_data[dat_file_data[:,3] == electrode_cluster,3] = 0 #remove electrode as cluster in column of final ROIs
+# dat_file_data[dat_file_data[:,4] == np.amax(electrode_data),4] = 1 #set pixel value to 1 if in electrode
+#
+# roi_index = 1
+# final_roi_snr_vals = np.delete(np.unique(dat_file_data[:,3]),0)
+# for roi in final_roi_snr_vals: #change ROI cluster values to be indexes not SNR values
+#     dat_file_data[dat_file_data[:,3] == roi,3] = roi_index
+#     roi_index = roi_index + 1
+#
+# electrode_pixel_ids = dat_file_data[dat_file_data[:,4] == 1,0] #list of pixel ids where pixel is in electrode
+# electrode_dat_file = np.zeros((4+len(electrode_pixel_ids),1))
+# electrode_dat_file[0,0] = 1 #only 1 "ROI" in this file (which is the electrode)
+# electrode_dat_file[1,0] = 0
+# electrode_dat_file[2,0] = len(electrode_pixel_ids) #number of pixels in electrode
+# electrode_dat_file[3,0] = 0
+# electrode_dat_file[4:len(electrode_pixel_ids)+4,0] = electrode_pixel_ids #pixel ides for pixels in electrode
+# np.savetxt("electrode.dat",electrode_dat_file,fmt="%i") #save dat file for electrode with values as integers
+#
+# all_rois_dat_file = np.zeros((1+3*int(np.amax(dat_file_data[:,3]))+len(dat_file_data[dat_file_data[:,3] != 0]),1))
+# all_rois_dat_file[0,0] = np.amax(dat_file_data[:,3])
+# all_roi_indexes_list = range(1,int(np.amax(dat_file_data[:,3]))+1)
+# start_row_index = 1
+# for roi_index in all_roi_indexes_list:
+#     roi_index = int(roi_index)
+#     roi_n_pixels = len(dat_file_data[dat_file_data[:,3]==roi_index])
+#     all_rois_dat_file[start_row_index,0] = roi_index-1
+#     all_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#     all_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#     all_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = dat_file_data[dat_file_data[:,3]==roi_index,0]
+#     start_row_index = start_row_index+2+roi_n_pixels+1
+# np.savetxt("ROIs_all.dat",all_rois_dat_file,fmt="%i")
+#
+# roi_index_groups = [all_roi_indexes_list[i*5:(i + 1)*5] for i in range((len(all_roi_indexes_list) + 5 - 1) // 5)]
+# for group in roi_index_groups:
+#     group_dat_file_data = np.empty([0,5])
+#     for roi_index in group: #get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
+#         roi_index_dat_file_data = dat_file_data[dat_file_data[:,3]==roi_index,:]
+#         group_dat_file_data = np.vstack([group_dat_file_data,roi_index_dat_file_data])
+#     group_rois_dat_file = np.zeros((1+3*int(np.amax(group_dat_file_data[:,3]))+len(group_dat_file_data[group_dat_file_data[:,3] != 0]),1))
+#     group_rois_dat_file[0,0] = np.amax(group_dat_file_data[:,3])
+#     group_rois_dat_list = group
+#     start_row_index = 1
+#     for roi_index in group_rois_dat_list:
+#         roi_index = int(roi_index)
+#         roi_n_pixels = len(group_dat_file_data[group_dat_file_data[:,3]==roi_index])
+#         group_rois_dat_file[start_row_index,0] = roi_index-1
+#         group_rois_dat_file[start_row_index+2, 0] = roi_index-1
+#         group_rois_dat_file[start_row_index+1,0] = roi_n_pixels+1
+#         group_rois_dat_file[start_row_index+3:start_row_index+3+roi_n_pixels,0] = group_dat_file_data[group_dat_file_data[:,3]==roi_index,0]
+#         start_row_index = start_row_index+2+roi_n_pixels+1
+#     np.savetxt("ROIs_"+str(min(group))+"_to_"+str(max(group))+".dat",group_rois_dat_file,fmt="%i")
