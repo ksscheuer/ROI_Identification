@@ -140,14 +140,91 @@ for i in range(0, width):
             group_index += 1
             group_bound.append(result)
 
+# plt.matshow(cluster_results)
+# plt.title("All Potential ROIs, Clusters: %d" % (k), fontsize=13)
+# # plt.show()
+# plt.savefig("All_Potential_ROIs.jpg")
+#
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="All_Potential_ROIs_")
+
+########################################### Keep ROIs with Amp > cutoff ################################################
+
+roi_amp_averages = np.zeros((width,height))
+
+# for roi_group_index in np.unique(cluster_results):
+for roi_group_index in np.delete(np.unique(cluster_results), 0):
+  location_index = (cluster_results == roi_group_index)
+  amp_data_for_group = amp_data * location_index
+  average = amp_data_for_group[amp_data_for_group != 0].mean()
+  # if average > Amp_cutoff:
+  #   print (average)
+  # else:
+  #   print ("Below Amp threshold.")
+  roi_amp_averages += (cluster_results == roi_group_index) * average
+
+# unique, counts = np.unique(roi_amp_averages, return_counts=True)
+# amp_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
+# background_amp = max(amp_dict, key=amp_dict.get) #find snr that occurs most often ie background
+# roi_amp_averages[roi_amp_averages == background_amp] = 0 #set background to 0
+
+roi_amp_averages[roi_amp_averages < Amp_cutoff] = 0
+
+cluster_results = roi_amp_averages
+
 plt.matshow(cluster_results)
-plt.title("All Potential ROIs, Clusters: %d" % (k), fontsize=13)
-# plt.show()
-plt.savefig("All_Potential_ROIs.jpg")
+plt.title("ROIs with Amplitude > Cutoff",fontsize=13)
+plt.show()
+# plt.savefig("ROIs_With_Amp_Greater_Than_Cutoff.jpg")
+#
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_Amp_Greater_Than_Cutoff_")
+#
+########################################### Keep ROIs with SNR > cutoff ################################################
 
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="All_Potential_ROIs_")
+# print(cluster_results)
 
-############################################### Add electrode ##########################################################
+roi_averages = np.zeros((width,height))
+
+# print(np.unique(cluster_results))
+
+# roi_group_index = 5
+
+# for roi_group_index in np.unique(cluster_results):
+for roi_group_index in np.delete(np.unique(cluster_results), 0):
+    # print(roi_group_index)
+    location_index = (cluster_results == roi_group_index) #find pixels that are part of given group
+    # print(location_index)
+    snr_data_for_group = snr_data * location_index #keep only SNR values that are part of given group
+    # print(snr_data_for_group)
+    average = snr_data_for_group[snr_data_for_group != 0].mean() #average SNR values for given group
+    # print(average)
+  # if average > SNR_cutoff:
+  #   print (average)
+  # else:
+  #   print ("Below SNR threshold.")
+    roi_averages += (cluster_results == roi_group_index) * average
+
+# print(roi_averages)
+
+#
+# unique, counts = np.unique(roi_averages, return_counts=True)
+# snr_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
+# background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most often ie background
+# roi_averages[roi_averages == background_snr] = 0 #set background to 0
+#
+roi_averages[roi_averages < SNR_cutoff] = 0
+
+cluster_results = roi_averages
+# print(cluster_results)
+
+# plt.matshow(roi_averages)
+plt.matshow(cluster_results)
+plt.title("ROIs with SNR > Cutoff",fontsize=13)
+plt.show()
+# plt.savefig("ROIs_With_SNR_Greater_Than_Cutoff.jpg")
+
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_Greater_Than_Cutoff_")
+
+############################ Add electrode, remove ROIs touching electrode and each other ##############################
 
 electrode_data = electrode_data * (max(np.unique(cluster_results))+1) #0 if not in electrode, 1+max group number if in cluster
 electrode_cluster = max(np.unique(pixel_cluster_data))+1
@@ -158,13 +235,6 @@ for i in range(0,width): #add electrode as new "roi"
     if electrode_data[j][i] != 0:
       cluster_results[j][i] = electrode_data[j][i]
       pixel_cluster_data_with_electrode[j][i] = electrode_cluster
-
-# plt.matshow(pixel_cluster_data)
-# plt.title("Date: %s, Slice: %s, Diameter Cutoff: %d" % (mydate,myslice,ROI_diameter_cutoff),fontsize=13)
-# plt.show()
-# plt.savefig("Step5_Electrode_and_ROIS_with_Diameter_Less_than_or_Equal_to_Cutoff.jpg")
-
-########################################## Remove ROIs touching electrode ##############################################
 
 electrode_x_min = electrode_coords[0]-1
 electrode_x_max = electrode_coords[3]-1
@@ -187,25 +257,18 @@ for i in range(0,width):
       cluster_results[j][i] = 0
       pixel_cluster_data[j][i] = 0
 
-# plt.matshow(pixel_cluster_data)
-# plt.title("ROIs Not Touching Electrode",fontsize=13)
-# plt.show()
-# plt.savefig("ROIs_not_Touching_Electrode.jpg")
-
-######################################### Remove ROIs touching each other ##############################################
-
 visited_cells = np.zeros((width,height))
 
 for i in range(0,width):
   for j in range(0,height):
     result = check_collisions(i,j,0)
 
-plt.matshow(cluster_results)
-plt.title("ROIs not Touching",fontsize=13)
-# plt.show()
-plt.savefig("ROIs_Not_Touching.jpg")
-
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Not_Touching_")
+# plt.matshow(cluster_results)
+# plt.title("ROIs not Touching",fontsize=13)
+# # plt.show()
+# plt.savefig("ROIs_Not_Touching.jpg")
+#
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Not_Touching_")
 
 ####################################### Remove ROIs with diameter > cutoff #############################################
 
@@ -219,97 +282,45 @@ for i in range(0,len(group_bound)):
   if x_big or y_big:
     cluster_results[cluster_results == (i+1)] = 0 #0 vs 1 index mismatch ie counting from 0 here but index from 1 above
 
-plt.matshow(cluster_results)
-plt.title("ROIs with Diameter < %d" % (ROI_diameter_cutoff),fontsize=13)
-# plt.show()
-plt.savefig("ROIS_Diameter_Within_Cutoff.jpg")
+# plt.matshow(cluster_results)
+# plt.title("ROIs with Diameter < %d" % (ROI_diameter_cutoff),fontsize=13)
+# # plt.show()
+# plt.savefig("ROIS_Diameter_Within_Cutoff.jpg")
+#
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Diameter_Within_Cutoff_")
 
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Diameter_Within_Cutoff_")
-
-########################################### Keep ROIs with SNR > cutoff ################################################
-
-roi_averages = np.zeros((width,height))
-
-for roi_group_index in np.unique(cluster_results):
-  location_index = (cluster_results == roi_group_index)
-  snr_data_for_group = snr_data * location_index
-  average = snr_data_for_group[snr_data_for_group != 0].mean()
-  # if average > SNR_cutoff:
-  #   print (average)
-  # else:
-  #   print ("Below SNR threshold.")
-  roi_averages += (cluster_results == roi_group_index) * average
-
-unique, counts = np.unique(roi_averages, return_counts=True)
-snr_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
-background_snr = max(snr_dict, key=snr_dict.get) #find snr that occurs most often ie background
-roi_averages[roi_averages == background_snr] = 0 #set background to 0
-
-roi_averages[roi_averages < SNR_cutoff] = 0
-
-plt.matshow(roi_averages)
-plt.title("ROIs with SNR > Cutoff",fontsize=13)
-# plt.show()
-plt.savefig("ROIs_With_SNR_Greater_Than_Cutoff.jpg")
-
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_Greater_Than_Cutoff_")
-
-########################################### Keep ROIs with Amp > cutoff ################################################
-
-roi_amp_averages = np.zeros((width,height))
-
-for roi_group_index in np.unique(cluster_results):
-  location_index = (cluster_results == roi_group_index)
-  amp_data_for_group = amp_data * location_index
-  average = amp_data_for_group[amp_data_for_group != 0].mean()
-  # if average > Amp_cutoff:
-  #   print (average)
-  # else:
-  #   print ("Below Amp threshold.")
-  roi_amp_averages += (cluster_results == roi_group_index) * average
-
-unique, counts = np.unique(roi_amp_averages, return_counts=True)
-amp_dict= dict(zip(unique, counts)) #make dictionary of snr/count pairs
-background_amp = max(amp_dict, key=amp_dict.get) #find snr that occurs most often ie background
-roi_amp_averages[roi_amp_averages == background_amp] = 0 #set background to 0
-
-roi_amp_averages[roi_amp_averages < Amp_cutoff] = 0
-
-plt.matshow(roi_amp_averages)
-plt.title("ROIs with Amplitude > Cutoff",fontsize=13)
-# plt.show()
-plt.savefig("ROIs_With_Amp_Greater_Than_Cutoff.jpg")
-
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_Amp_Greater_Than_Cutoff_")
-
-######################################## Keep ROIs with SNR and Amp > cutoff ###########################################
-
-roi_keep = np.zeros((width,height))
-for i in range(0,width):
-  for j in range(0,height):
-    if roi_amp_averages[j][i] != 0:
-      roi_keep[j][i] = roi_averages[j][i]
-
-roi_keep_no_electrode = roi_keep
-
-plt.matshow(roi_keep)
-plt.title("ROIs with SNR and Amplitude > Cutoff",fontsize=13)
-# plt.show()
-plt.savefig("ROIs_With_SNR_Amp_Greater_Than_Cutoff.jpg")
-
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_And_Amp_Greater_Than_Cutoff_")
-
+# ######################################## Keep ROIs with SNR and Amp > cutoff ###########################################
+#
+# maybe not necessary as long as keep using cluster_results for everything?
+#
+# roi_keep = np.zeros((width,height))
+# for i in range(0,width):
+#   for j in range(0,height):
+#     if roi_amp_averages[j][i] != 0:
+#       roi_keep[j][i] = roi_averages[j][i]
+#
+# roi_keep_no_electrode = roi_keep
+#
+# plt.matshow(roi_keep)
+# plt.title("ROIs with SNR and Amplitude > Cutoff",fontsize=13)
+# # plt.show()
+# plt.savefig("ROIs_With_SNR_Amp_Greater_Than_Cutoff.jpg")
+#
+# produce_dat_files(width=width,height=height,trace_data=roi_keep,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_And_Amp_Greater_Than_Cutoff_")
+#
 ############################################ Plot final ROIs and electrode #############################################
 
-produce_dat_files(width=width,height=height,trace_data=roi_keep,n_rois_per_file=50,dat_file_name="ROIs_")
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_")
+# produce_dat_files(width=width,height=height,trace_data=roi_keep,n_rois_per_file=50,dat_file_name="ROIs_")
 produce_dat_files(width=width,height=height,trace_data=electrode_data,n_rois_per_file=1,dat_file_name="Electrode")
 
 for i in range(0,width): #add electrode as new "roi"
   for j in range(0,height):
     if electrode_data[j][i] != 0:
-      roi_keep[j][i] = electrode_cluster
+      # roi_keep[j][i] = electrode_cluster
+      cluster_results[j][i] = electrode_cluster
 
-plt.matshow(roi_keep)
+plt.matshow(cluster_results)
 plt.title("Final ROIs with Electrode",fontsize=13)
-# plt.show()
-plt.savefig("Final ROIs.jpg")
+plt.show()
+# plt.savefig("Final ROIs.jpg")
