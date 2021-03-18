@@ -8,7 +8,7 @@ library(factoextra)
 
 xdim <- 80 #pixels in X direction
 ydim <- 80 #pixels in Y direction
-SNRcutoff_choice <- "pre-stim max" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
+SNRcutoff_choice <- "RMS" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
   #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values 
   #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values 
   #before stimulus, or "pre-stim max" for the maximum value of SNR values 
@@ -288,3 +288,5 @@ write.table(amp_for_python,"Amp_for_python.txt",row.names = FALSE,col.names = FA
 Electrode_for_python <- t(matrix(cluster_coords_data$Electrode, ncol=xdim, nrow=ydim))
 Electrode_for_python[which(is.na(Electrode_for_python))] <- 0
 write.table(Electrode_for_python,"Electrode_for_python.txt",row.names = FALSE,col.names = FALSE)
+
+warnings()
