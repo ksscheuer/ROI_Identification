@@ -17,7 +17,7 @@ SNRcutoff_choice <- "RMS" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
 k_choice <- "automatic"
   #can be pre-set value or automatically determined based on BIC (see 
   #Ckmeans.1d.dp package for details)
-
+cluster_SNRcutoff <- 4.5 #remove clusters with average SNR < cutoff
 
 ########################### Load files #####################################
 ############################################################################
@@ -232,7 +232,40 @@ ggplot(cluster_coords_data,aes(x=X,y=Y)) +
     colors=rev(c(
     "red1","yellow1","green1","dodgerblue1","navy"))
   )
-ggsave("Step2_Clusters.jpg",width=6.5,height=6)
+ggsave("Step2a_Clusters.jpg",width=6.5,height=6)
+
+
+clusters_to_remove <- which(clustering_results$centers < cluster_SNRcutoff)
+for (i in 1:nrow(cluster_coords_data)) {
+  if (cluster_coords_data$Cluster[i] %in% clusters_to_remove) {
+    cluster_coords_data$Cluster[i] <- NA
+  }
+}
+
+
+# test <- clustering_results$centers[-clusters_to_remove]
+#plot clusters
+ggplot(cluster_coords_data,aes(x=X,y=Y)) +
+  geom_tile(aes(fill=Cluster)) +
+  labs(title=paste("Clusters = ",k-length(clusters_to_remove),", SNR Cutoff = ",cluster_SNRcutoff)) +
+  theme(
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    panel.background = element_blank(),
+    legend.title = element_blank(),
+    plot.title = element_text(hjust=0.5)
+  ) +
+  scale_y_reverse() +
+  # scale_fill_gradientn(breaks=seq(1:5),labels=paste(round(test,3)),
+  #                      colors=rev(c(
+  #                        "red1","yellow1","green1","dodgerblue1","navy"))
+  scale_fill_gradientn(breaks=seq(1:(k-length(clusters_to_remove))),labels=paste(round(clustering_results$centers[-clusters_to_remove],3)),
+                       colors=rev(c(
+                         "red1","yellow1","green1","dodgerblue1","navy"))
+  )
+ggsave("Step2b_Clusters_Above_SNR_Cutoff.jpg",width=6.5,height=6)
 
 ###################### Indicate electrode location #########################
 ############################################################################
