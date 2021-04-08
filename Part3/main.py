@@ -15,7 +15,7 @@ for dirName, subdirList, fileList in os.walk(".",topdown=False):
     for directory in dirName:
         keep_dirNameList.append(directory)
     for folder in subdirList:
-        if 'notUsable' not in folder:
+        if 'notUsable' not in folder and 'Old' not in folder:
             keep_folderList.append(folder)
     for file in fileList:
         if 'Not_Usable' not in file and '.txt' in file:
@@ -24,11 +24,12 @@ for dirName, subdirList, fileList in os.walk(".",topdown=False):
     # test = [x for x in fileList if 'Not_Usable' not in x]
     # # print("break")
     # test2 = [x for x in test if 'Not_Usable' not in x]
-# print(keep_folderList)
+print(keep_folderList)
 # print(keep_fileList)
 
 for folder in keep_folderList:
     current_fileList = []
+    # print(current_fileList)
     for file in keep_fileList:
         if folder in file:
             current_fileList.append(file)
@@ -64,6 +65,8 @@ for folder in keep_folderList:
     metadata_name = folder + str(metadata_file).replace("['", "\\")
     metadata_name = metadata_name.replace("']", "")
 
+    print(amp_name,snr_name,latency_name,halfwidth_name,distance_orig_name,distance_shift_name,layers_name,metadata_name)
+
     amp = pd.read_csv(amp_name, sep='\t',names=["ROI_Id","Amp"])
     snr = pd.read_csv(snr_name, sep='\t',names=["ROI_Id","SNR"])
     latency = pd.read_csv(latency_name, sep='\t',names=["ROI_Id","Latency"])
@@ -72,8 +75,8 @@ for folder in keep_folderList:
     distance_orig = pd.read_csv(distance_orig_name,header=0)
     # distance_shift = pd.read_csv(distance_shift_name,names=['ROI_Id','X_shifted_distance','Y_shifted_distance','Euc_shifted_distance'])
     distance_shift = pd.read_csv(distance_shift_name,header=0)
-    layers = pd.read_csv(layers_name, sep='\t',names=["ROI_Id","Layers"])
-    visual = pd.read_csv(visual_name, sep='\t',names=["ROI_Id","Visual"])
+#     layers = pd.read_csv(layers_name, sep='\t',names=["ROI_Id","Layers"])
+#     visual = pd.read_csv(visual_name, sep='\t',names=["ROI_Id","Visual"])
     metadata = pd.read_csv(metadata_name,sep='\t',names=['Variable','Value'])
     metadata = pd.DataFrame.transpose(metadata)
     metadata.columns = metadata.iloc[0]
@@ -88,8 +91,8 @@ for folder in keep_folderList:
             "Pulse_index":metadata.iloc[0,7],
             "IPI":metadata.iloc[0,8],
             "ROI_Id":amp["ROI_Id"],
-            "Visual":visual["Visual"],
-            "Layers":layers["Layers"],
+            # "Visual":visual["Visual"],
+            # "Layers":layers["Layers"],
             "Amp":amp["Amp"],
             "SNR":snr["SNR"],
             "Latency":latency["Latency"],
@@ -102,8 +105,9 @@ for folder in keep_folderList:
             "Dist_Shift_Euc":distance_shift['Euc_shifted_distance'],
             }
     df = pd.DataFrame(data,columns=["Slice_Loc_Run","Trial_x_Time","Stim_Intensity","Stim_Layer",
-                                    "RLI","Cx","n_Pulses","Pulse_index","IPI","ROI_Id","Visual",
-                                    "Layers","Amp","SNR","Latency","Halfwidth",'Dist_Orig_X',
+                                    "RLI","Cx","n_Pulses","Pulse_index","IPI","ROI_Id",
+                                    # "Visual","Layers",
+                                    "Amp","SNR","Latency","Halfwidth",'Dist_Orig_X',
                                     "Dist_Orig_Y","Dist_Orig_Euc","Dist_Shift_X","Dist_Shift_Y",
                                     "Dist_Shift_Euc"])
 
@@ -136,11 +140,14 @@ for folder in keep_folderList:
 animal_list = []
 for dirName, subdirList, fileList in os.walk(".",topdown=True):
     for file in fileList:
+        print(file)
         if 'Slice_Data' in file:
             # print(file)
             current_slice = pd.read_csv(file,names=["Slice_Loc_Run","Trial_x_Time","Stim_Intensity",
                                                     "Stim_Layer","RLI","Cx","n_Pulses","Pulse_index",
-                                                    "IPI","ROI_Id","Visual","Layers","Amp","SNR",
+                                                    "IPI","ROI_Id",
+                                                    # "Visual","Layers",
+                                                    "Amp","SNR",
                                                     "Latency","Halfwidth",'X_dist',"Y_dist","Euc_dist",
                                                     'X_shift_dist',"Y_shift_dist","Euc_shift_dist"])
             # print(current_slice)
