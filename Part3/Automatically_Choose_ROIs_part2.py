@@ -6,9 +6,9 @@ import sys
 np.set_printoptions(suppress=True) #prevent np exponential notation on print
 np.set_printoptions(threshold=np.inf) #print all values in numpy array
 
-ROI_diameter_cutoff = 3
-SNR_cutoff = 3.8
-Amp_cutoff = 0.001 
+ROI_diameter_cutoff = 3 #2 if using 10x lens, 3 if using 20x
+SNR_cutoff = 5
+Amp_cutoff = 0.001
 rlimit = 5000 #recursion limit (for identifying all potential ROIs)
 
 pixel_cluster_data = np.loadtxt("Clusters_for_python.txt")
@@ -85,7 +85,7 @@ def produce_dat_files(width,height,trace_data,n_rois_per_file,dat_file_name):
         for roi_index in group:  # get pixel ids, x and y coordinates, roi indexes and electrode indexes for given group of ROIs
             roi_index_dat_file_data = dat_file_data[dat_file_data[:, 3] == roi_index, :]
             group_dat_file_data = np.vstack([group_dat_file_data, roi_index_dat_file_data])
-        group_rois_dat_file = np.zeros((1 + 3 * int(np.amax(group_dat_file_data[:, 3])) + len(
+        group_rois_dat_file = np.zeros((2 + 3 * int(np.amax(group_dat_file_data[:, 3])) + len(
             group_dat_file_data[group_dat_file_data[:, 3] != 0]), 1))
         group_rois_dat_file[0, 0] = np.amax(group_dat_file_data[:, 3])
         group_rois_dat_list = group
@@ -308,11 +308,13 @@ plt.set_cmap("hsv")
 # plt.show()
 plt.savefig("ROIs_Not_Touching.jpg")
 
-produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Not_Touching_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Not_Touching_")
 
 ############################################ Plot final ROIs and electrode #############################################
 
 produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_")
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=300,dat_file_name="ROIs_")
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=5,dat_file_name="ROIs_")
 produce_dat_files(width=width,height=height,trace_data=electrode_data,n_rois_per_file=1,dat_file_name="Electrode")
 
 for i in range(0,width): #add electrode as new "roi"

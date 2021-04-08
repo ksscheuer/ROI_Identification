@@ -9,15 +9,15 @@ library(factoextra)
 xdim <- 80 #pixels in X direction
 ydim <- 80 #pixels in Y direction
 SNRcutoff_choice <- "RMS" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
-  #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values 
-  #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values 
-  #before stimulus, or "pre-stim max" for the maximum value of SNR values 
+  #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values
+  #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values
+  #before stimulus, or "pre-stim max" for the maximum value of SNR values
   #before stimulus, or "RMS" for root mean square noise calculated as
   #squareroot fo the mean of squared(average pre-stimulus SNR values)
 k_choice <- "automatic"
-  #can be pre-set value or automatically determined based on BIC (see 
+  #can be pre-set value or automatically determined based on BIC (see
   #Ckmeans.1d.dp package for details)
-cluster_SNRcutoff <- 4.5 #remove clusters with average SNR < cutoff
+cluster_SNRcutoff <- 5 #remove clusters with average SNR < cutoff
 
 ########################### Load files #####################################
 ############################################################################
@@ -28,7 +28,7 @@ amp_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"
   #list of file names for files containing amplitude values
 snr_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_snr")]
   #list of file names for files containing SNR values
-  
+
 ########################## Average data ####################################
 ############################################################################
 
@@ -44,7 +44,7 @@ if (length(prestim_filenames) > 1) {
   prestim_data[,1] <- read.table(prestim_filenames[1])[,2]
   prestim_data[,2] <- read.table(prestim_filenames[1])[,2]
 }
-  #create, name, and fill matrix where each column contains SNR values 
+  #create, name, and fill matrix where each column contains SNR values
   #before stimulus for one prestim file and last column contains average
   #SNR value before stimulus across all trials
 
@@ -61,7 +61,7 @@ if (length(amp_filenames) > 1) {
   amp_data[,2] <- read.table(amp_filenames[1])[,2]
 }
   #create, name, and fill matrix where each column contains amplitude
-  #values before stimulus for one amp file and last column contains 
+  #values before stimulus for one amp file and last column contains
   #amplitude value before stimulus across all trials
 
 snr_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(snr_filenames)+1))
@@ -76,7 +76,7 @@ if (length(snr_filenames) > 1) {
   snr_data[,1] <- read.table(snr_filenames[1])[,2]
   snr_data[,2] <- read.table(snr_filenames[1])[,2]
 }
-  #create, name, and fill matrix where each column contains SNR values 
+  #create, name, and fill matrix where each column contains SNR values
   #for one SNR file and last column contains average SNR value across
   #all trials
 
@@ -137,7 +137,7 @@ if (SNRcutoff_choice == "pre-stim mean") {
 #plot SNR values for each file and the overall average
 snr_coords_data <- data.frame(rep(1:ydim,xdim),rep(1:ydim,each=xdim),snr_data)
 colnames(snr_coords_data) <- c("X","Y",colnames(snr_data))
-for (i in 3:ncol(snr_data)+2) {
+for (i in 3:ncol(snr_coords_data)+2) {
   ggplot(snr_coords_data,aes(x=X,y=Y)) +
     geom_tile(aes(fill=snr_coords_data[,i])) +
     labs(title=paste(colnames(snr_coords_data)[i]," SNR")) +
@@ -189,14 +189,14 @@ ggsave(paste("Step1_SNR_Over_Cutoff.jpg"),width=6.5,height=6)
 # snr_vals_to_cluster <- intersect(which(snr_data$Avg>SNRcutoff),which(!is.na(snr_data$Avg)))
 clustering_results <- Ckmeans.1d.dp(snr_coords_data$Avg_cutoff[which(!is.na(snr_coords_data$Avg_cutoff))],
                                     k=c(1,20))
-  #using only SNR values > cutoff, perform K-means clustering optimized for 
-  #one-dimensional data (see Ckmeans.1d.dp package and "Ckmeans.1d.dp: 
-  #Optimal k-means Clustering in One dimension by Dynamic Programming" by 
+  #using only SNR values > cutoff, perform K-means clustering optimized for
+  #one-dimensional data (see Ckmeans.1d.dp package and "Ckmeans.1d.dp:
+  #Optimal k-means Clustering in One dimension by Dynamic Programming" by
   #Wang, H. and Song, M. published in The R Journal Vol 3/2 Dec 2011)
 
-#automatically choose number of clusters based on BIC value or manually 
+#automatically choose number of clusters based on BIC value or manually
 #determine number of clusters
-if (k_choice == "automatic") { 
+if (k_choice == "automatic") {
   k <- max(clustering_results$cluster)
 } else {
   k <- k_choice
@@ -270,7 +270,7 @@ ggsave("Step2b_Clusters_Above_SNR_Cutoff.jpg",width=6.5,height=6)
 ###################### Indicate electrode location #########################
 ############################################################################
 
-#add column which contains electrode location such that pixel in electrode 
+#add column which contains electrode location such that pixel in electrode
 #= 1 and all other pixels = 0, find coordinate boundaries of electrode
 cluster_coords_data["Electrode"] <- 0
 if ("electrode.csv" %in% list.files()) {
@@ -323,3 +323,4 @@ Electrode_for_python[which(is.na(Electrode_for_python))] <- 0
 write.table(Electrode_for_python,"Electrode_for_python.txt",row.names = FALSE,col.names = FALSE)
 
 warnings()
+

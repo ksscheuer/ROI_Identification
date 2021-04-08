@@ -2,12 +2,15 @@ import pandas as pd
 import math
 import numpy
 
-ROIs_dat = pd.read_csv('ROIs51to76.dat',header=None)
-angle_deg_clock = 92
+# print('test')
+
+ROIs_dat = pd.read_csv('ROIs_1_to_93.dat',header=None)
+# print(ROIs_dat.head())
+angle_deg_clock = 359
 angle_deg = 360-angle_deg_clock #formula below needs angle in counterclockwise, imageJ rotates clockwise
 
 ### Find tip of electrode ###
-electrode_dat = pd.read_csv('electrode.dat',header=None)
+electrode_dat = pd.read_csv('Electrode1_to_1.dat',header=None)
 electrode_dat = electrode_dat.dropna()
 electrode_dat = electrode_dat.drop([0,1,2,3],axis=0)
     #drop first four rows bc not pixel IDs
@@ -31,12 +34,15 @@ electrode_tip_ycoord = avg_ycoord
 
 ### Find coords for each ROI ###
 nROIs = ROIs_dat[0][0]
+# nROIs = 42
 # print(nROIs)
 
 ROI_row_index_breaks = []
+# print(range(0,nROIs))
 for ROI_Id in range(0,nROIs): #counts from 0 to 1-nROIS
     ROI_Id_row_index_choices = ROIs_dat.index[ROIs_dat[0] == ROI_Id] + 1
-    # print(ROI_Id_row_index_choices)
+    print(ROI_Id_row_index_choices)
+    # print(ROIs_dat)
     choice_diff_list = numpy.diff(ROI_Id_row_index_choices)
     if 1 in choice_diff_list: #if any ROI has ROI_Id + 1 pixels (so three lines in a row have ROI_Id)
         val_index_list = []
