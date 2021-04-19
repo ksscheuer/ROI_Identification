@@ -6,31 +6,60 @@ library(ggplot2)
 library(Ckmeans.1d.dp)
 library(factoextra)
 
+############################## YesWorkflow main markup ####################################
+###########################################################################################
+# declare parameters and overall input/output of this script
+# @BEGIN Part1
+
+########################### Parameters #####################################
+############################################################################
+
+# @PARAM xdim
 xdim <- 80 #pixels in X direction
+
+# @PARAM ydim
 ydim <- 80 #pixels in Y direction
+
+# @PARAM SNRcutoff_choice
 SNRcutoff_choice <- "RMS" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
   #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values
   #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values
   #before stimulus, or "pre-stim max" for the maximum value of SNR values
   #before stimulus, or "RMS" for root mean square noise calculated as
   #squareroot fo the mean of squared(average pre-stimulus SNR values)
+
+# @PARAM k_choice
 k_choice <- "automatic"
   #can be pre-set value or automatically determined based on BIC (see
   #Ckmeans.1d.dp package for details)
+
+# @PARAM cluster_SNRcutoff  
 cluster_SNRcutoff <- 5 #remove clusters with average SNR < cutoff
 
-########################### Load files #####################################
+
+########################### Load input files ###############################
 ############################################################################
 
+# @IN preStim_data_files @URI file:*_preStim.txt
 prestim_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_preStim")]
   #list of file names for files containing SNR values before stimulus
+
+# @IN amp_data_files @URI file:*_amp.txt
 amp_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_amp")]
   #list of file names for files containing amplitude values
+
+# @IN snr_data_files @URI file:*_snr.txt
 snr_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"),"_snr")]
   #list of file names for files containing SNR values
 
+
 ########################## Average data ####################################
 ############################################################################
+
+# @BEGIN average_prestim
+# @IN preStim_data_files @URI file:*_preStim.txt
+# @OUT prestim_data 
+# @END average_prestim
 
 prestim_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(prestim_filenames)+1))
 colnames(prestim_data) <- c(gsub("_preStim.txt","",prestim_filenames),"Avg")
@@ -48,6 +77,11 @@ if (length(prestim_filenames) > 1) {
   #before stimulus for one prestim file and last column contains average
   #SNR value before stimulus across all trials
 
+# @BEGIN average_amp
+# @IN amp_data_files @URI file:*_amp.txt
+# @OUT amp_data
+# @END average_amp
+
 amp_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(amp_filenames)+1))
 colnames(amp_data) <- c(gsub("_amp.txt","",amp_filenames),"Avg")
 if (length(amp_filenames) > 1) {
@@ -63,6 +97,11 @@ if (length(amp_filenames) > 1) {
   #create, name, and fill matrix where each column contains amplitude
   #values before stimulus for one amp file and last column contains
   #amplitude value before stimulus across all trials
+
+# @BEGIN average_snr
+# @IN snr_data_files @URI file:*_snr.txt
+# @OUT snr_data @AS snr_data
+# @END average_snr
 
 snr_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(snr_filenames)+1))
 colnames(snr_data) <- c(gsub("_snr.txt","",snr_filenames),"Avg")
@@ -83,7 +122,16 @@ if (length(snr_filenames) > 1) {
 ############################ SNR cutoff ####################################
 ############################################################################
 
+# @BEGIN cutoff_snr
+# @PARAM SNRcutoff_choice
+# @IN prestim_data @URI file:*_snr.txt
+# @OUT SNRcutoff
+# @OUT SNR_all @URI file:SNR_all.txt
+# @OUT Step1_SNR_Cutoff @URI file:Step1_SNR_Cutoff.jpg
+# @END cutoff_snr
+
 #set and plot SNR cutoff based on choice made at top of file
+# @OUT Step1_SNR_Cutoff @URI file:Step1_SNR_Cutoff.jpg
 if (SNRcutoff_choice == "pre-stim mean") {
   SNRcutoff <- mean(prestim_data$Avg)
   ggplot(prestim_data,aes(x=Avg)) +
@@ -134,6 +182,14 @@ if (SNRcutoff_choice == "pre-stim mean") {
 ############################## Plot SNR ####################################
 ############################################################################
 
+# @BEGIN plot_snr
+# @IN snr_data
+# @IN SNRcutoff
+# @OUT Step1_SNR_colnames @URI file:Step1_SNR_colnames.jpg
+# @OUT Step1_SNR_Over_Cutoff @URI file:Step1_SNR_Over_Cutoff.jpg
+# @OUT snr_coords_data
+# @END plot_snr
+
 #plot SNR values for each file and the overall average
 snr_coords_data <- data.frame(rep(1:ydim,xdim),rep(1:ydim,each=xdim),snr_data)
 colnames(snr_coords_data) <- c("X","Y",colnames(snr_data))
@@ -154,6 +210,7 @@ for (i in 3:ncol(snr_coords_data)+2) {
     scale_fill_gradientn(colors=rev(c(
       "red1","yellow1","green1","dodgerblue1","navy"))
     )
+  # @OUT Step1_SNR_colnames @URI file:Step1_SNR_colnames.jpg
   ggsave(paste("Step1_SNR_",colnames(snr_coords_data)[i],".jpg",sep=""),width=6.5,height=6)
 }
 
@@ -181,10 +238,21 @@ ggplot(snr_coords_data,aes(x=X,y=Y)) +
   scale_fill_gradientn(colors=rev(c(
     "red1","yellow1","green1","dodgerblue1","navy"))
   )
+# @OUT Step1_SNR_Over_Cutoff @URI file:Step1_SNR_Over_Cutoff.jpg
 ggsave(paste("Step1_SNR_Over_Cutoff.jpg"),width=6.5,height=6)
 
 ################# One-dimensional K-means clustering #######################
 ############################################################################
+
+# @BEGIN Kmeans_cluster_1D
+# @PARAM cluster_SNRcutoff
+# @PARAM k_choice
+# @IN snr_coords_data
+# @OUT Step2a_Clusters @URI file:Step2a_Clusters.jp
+# @OUT Step2b_Clusters_Above_SNR_Cutoff @URI file:Step2b_Clusters_Above_SNR_Cutoff.jpg
+# @OUT cluster_coords_data
+# @END Kmeans_cluster_1D
+
 
 # snr_vals_to_cluster <- intersect(which(snr_data$Avg>SNRcutoff),which(!is.na(snr_data$Avg)))
 clustering_results <- Ckmeans.1d.dp(snr_coords_data$Avg_cutoff[which(!is.na(snr_coords_data$Avg_cutoff))],
@@ -232,6 +300,8 @@ ggplot(cluster_coords_data,aes(x=X,y=Y)) +
     colors=rev(c(
     "red1","yellow1","green1","dodgerblue1","navy"))
   )
+
+# @OUT Step2a_Clusters @URI file:Step2a_Clusters.jpg
 ggsave("Step2a_Clusters.jpg",width=6.5,height=6)
 
 
@@ -265,10 +335,18 @@ ggplot(cluster_coords_data,aes(x=X,y=Y)) +
                        colors=rev(c(
                          "red1","yellow1","green1","dodgerblue1","navy"))
   )
+
+# @OUT Step2b_Clusters_Above_SNR_Cutoff @URI file:Step2b_Clusters_Above_SNR_Cutoff.jpg
 ggsave("Step2b_Clusters_Above_SNR_Cutoff.jpg",width=6.5,height=6)
 
 ###################### Indicate electrode location #########################
 ############################################################################
+
+
+# @BEGIN locate_electrode
+# @IN cluster_coords_data
+# @OUT Electrode_coords @URI file:Electrode_coords.txt
+# @END locate_electrode
 
 #add column which contains electrode location such that pixel in electrode
 #= 1 and all other pixels = 0, find coordinate boundaries of electrode
@@ -292,35 +370,66 @@ if ("electrode.csv" %in% list.files()) {
 ############################## Save values #################################
 ############################################################################
 
+# @BEGIN save_prestim
+# @IN prestim_data
+# @OUT PreStim_all @URI file:PreStim_all.txt
+# @END save_prestim
+# @OUT PreStim_all @URI file:PreStim_all.txt
 write.table(prestim_data,"PreStim_all.txt",row.names = FALSE)
-write.table(amp_data,"Amp_all.txt",row.names = FALSE)
-write.table(snr_coords_data,"SNR_all.txt",row.names = FALSE)
-write.table(cluster_coords_data,"Clusters_all.txt",row.names = FALSE)
-write.table(electrode_loc,"Electrode_coords.txt",row.names = FALSE,col.names = FALSE)
 
-#save cluster values as xdim by ydim matrix ready for import to Python
+# @BEGIN save_amp
+# @IN amp_data
+# @OUT Amp_all @URI file:Amp_all.txt
+# @END save_amp
+# @OUT Amp_all @URI file:Amp_all.txt
+write.table(amp_data,"Amp_all.txt",row.names = FALSE)
+
+# @OUT SNR_all @URI file:SNR_all.txt
+write.table(snr_coords_data,"SNR_all.txt",row.names = FALSE)
+
+
+# @BEGIN save_clusters
+# @IN cluster_coords_data
+# @OUT Clusters_all @URI file:Clusters_all.txt
+# @OUT Clusters_for_python @URI file:Clusters_for_python.txt
+# @OUT SNR_for_python @URI file:SNR_for_python.txt
+# @OUT Amp_for_python @URI file:Amp_for_python.txt
+# @OUT Electrode_for_python @URI file:Electrode_for_python.txt
+# @END save_clusters
+
+# @OUT Clusters_all @URI file:Clusters_all.txt
+write.table(cluster_coords_data,"Clusters_all.txt",row.names = FALSE)
+# save cluster values as xdim by ydim matrix ready for import to Python
 clusters_for_python <- t(matrix(cluster_coords_data$Cluster, ncol=xdim, nrow=ydim))
 clusters_for_python[which(is.na(clusters_for_python))] <- 0
+
+# @OUT Electrode_coords @URI file:Electrode_coords.txt
+write.table(electrode_loc,"Electrode_coords.txt",row.names = FALSE,col.names = FALSE)
+
+# @OUT Clusters_for_python @URI file:Clusters_for_python.txt
 write.table(clusters_for_python,"Clusters_for_python.txt",row.names = FALSE,col.names = FALSE)
 
-#save average SNR values as xdim by ydim matrix ready for import to Python
-snr_for_python <- t(matrix(cluster_coords_data$SNR, ncol=xdim, nrow=ydim))
-snr_for_python[which(is.na(snr_for_python))] <- 0
-write.table(snr_for_python,"SNR_for_python.txt",row.names = FALSE,col.names = FALSE)
+# Deleted code that wasn't doing anything
 
 #save average SNR values as xdim by ydim matrix ready for import to Python
 snr_for_python <- t(matrix(cluster_coords_data$SNR, ncol=xdim, nrow=ydim))
+# @OUT SNR_for_python @URI file:SNR_for_python.txt
 write.table(snr_for_python,"SNR_for_python.txt",row.names = FALSE,col.names = FALSE)
 
 #save average amplitude values as xdim by ydim matrix ready for import to Python
 amp_for_python <- t(matrix(amp_data$Avg, ncol=xdim, nrow=ydim))
+# @OUT Amp_for_python @URI file:Amp_for_python.txt
 write.table(amp_for_python,"Amp_for_python.txt",row.names = FALSE,col.names = FALSE)
 
 #save pixels indicating electrode location (electrode pixel = 1, other pixels
 #= 0 as xdim by ydim matrix ready for import to Python
+# @OUT Electrode_for_python @URI file:Electrode_for_python.txt
 Electrode_for_python <- t(matrix(cluster_coords_data$Electrode, ncol=xdim, nrow=ydim))
 Electrode_for_python[which(is.na(Electrode_for_python))] <- 0
 write.table(Electrode_for_python,"Electrode_for_python.txt",row.names = FALSE,col.names = FALSE)
 
 warnings()
 
+# @END Part1
+###########################################################################################
+###########################################################################################
