@@ -1,0 +1,19 @@
+Stimulate at frame ~96
+For analyzing spikes in "control" sets of trials:
+	"Control" = all sets where only 1 stim, can be 100 or 200 uA,
+		includes sets not explicitly marked "control". If only one
+		set used as control, can't be 20 x 10, 30 x 10 etc (but
+		*can* be 10 x 10) so that trials used for correlation 
+		analysis not used as baseline controls
+	Baseline correction and measure windows both set to 90 and 40
+	RLI division on, data inverse on, Nor2Array max off
+	T-filter on binomial8, S-filter on 1
+For determining background / initial SNR cutoff:
+	Set measure window to 20 and 40
+	Baseline correction still set to 90 and 40
+	Cutoff = 95th percentile SNR
+	Remove all pixels with SNR <= cutoff (step 1)
+For analyzing second spikes:
+	If IPI = 20: measure window set to 130 and 40
+	If IPI = 50: measure window set to 190 and 40
+	If IPI = 100: measure window set to 290 and 40

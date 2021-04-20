@@ -1,0 +1,17 @@
+Stimulate at frame ~83
+For analyzing spikes in "control" sets of trials:
+	"Control" set = only 1 stim, can be 100 or 200 uA
+	Baseline correction and measure windows both set to 80 and 40
+	RLI division on, data inverse on, Nor2Array max off
+	T-filter on binomial8, S-filter on 1
+For determining background / initial SNR cutoff:
+	Baseline correction window still set to 80 and 40
+	Measure window now set to 20 and 40
+	Cutoff = 95th percentile SNR
+	Remove all pixels with SNR <= cutoff (step 1)
+For analyzing second spikes:
+	Baseline correction still set to 80 and 40
+	If IPI = 20: measure window set to 120 and 40
+	If IPI = 50: measure window set to 180 and 40
+	If IPI = 100: measure window set to 280 and 40
+To be included in data set, slice must have at least 5 ROIs
