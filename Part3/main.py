@@ -111,18 +111,18 @@ for folder in keep_folderList:
                                     "Dist_Orig_Y","Dist_Orig_Euc","Dist_Shift_X","Dist_Shift_Y",
                                     "Dist_Shift_Euc"])
 
-    if len(snr.count(axis='columns')) > 75:
-        snr_largest = snr.nlargest(n=75,columns='SNR')
-        snr_largest_id = snr_largest['ROI_Id']
-        snr_largest_id = snr_largest_id-1
-        snr_largest_id = snr_largest_id.sort_values(ascending=True)
-        # print(snr_largest_id)
-        # snr_largest_id = snr_largest_id.sort()
-        # print(snr_largest_id)
-        # print(type([snr_largest_id]-1))
-        # print(amp.iloc[snr_largest_id,1])
-        df = df.iloc[snr_largest_id,]
-        # print(df)
+    # if len(snr.count(axis='columns')) > 75:
+    #     snr_largest = snr.nlargest(n=75,columns='SNR')
+    #     snr_largest_id = snr_largest['ROI_Id']
+    #     snr_largest_id = snr_largest_id-1
+    #     snr_largest_id = snr_largest_id.sort_values(ascending=True)
+    #     # print(snr_largest_id)
+    #     # snr_largest_id = snr_largest_id.sort()
+    #     # print(snr_largest_id)
+    #     # print(type([snr_largest_id]-1))
+    #     # print(amp.iloc[snr_largest_id,1])
+    #     df = df.iloc[snr_largest_id,]
+    #     # print(df)
 
     df.to_csv('Slice_Data_'+folder+'.csv',index=False)
 

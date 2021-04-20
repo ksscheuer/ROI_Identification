@@ -4,9 +4,9 @@ import numpy
 
 # print('test')
 
-ROIs_dat = pd.read_csv('ROIs_1_to_63.dat',header=None)
+ROIs_dat = pd.read_csv('ROIs_1_to_43.dat',header=None)
 # print(ROIs_dat.head())
-angle_deg_clock = 52
+angle_deg_clock = 40
 angle_deg = 360-angle_deg_clock #formula below needs angle in counterclockwise, imageJ rotates clockwise
 
 ### Find tip of electrode ###

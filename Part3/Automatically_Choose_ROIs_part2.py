@@ -113,13 +113,13 @@ def check_collisions(x,y,group_index):
       yup = max(0, y-1)
       ydown = min(height-1, y+1)
       check_collisions(x,yup,cell_value)
-      # check_collisions(xleft,yup,cell_value)
+      check_collisions(xleft,yup,cell_value)
       check_collisions(xleft,y,cell_value)
-      # check_collisions(xleft,ydown,cell_value)
+      check_collisions(xleft,ydown,cell_value)
       check_collisions(x,ydown,cell_value)
-      # check_collisions(xright,ydown,cell_value)
+      check_collisions(xright,ydown,cell_value)
       check_collisions(xright,y,cell_value)
-      # check_collisions(xright,yup,cell_value)
+      check_collisions(xright,yup,cell_value)
     else:
       # print ("Found collision",group_index,cell_value)
       cluster_results[cluster_results == group_index] = 0
