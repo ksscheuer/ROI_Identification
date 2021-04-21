@@ -1,0 +1,51 @@
+For analyzing spikes in "control" sets of trials:
+	"Control" = all sets where only 1 stim, can be 100 or 200 uA,
+		includes sets not explicitly marked "control"
+	Baseline correction and measure windows both set to 90 and 40
+	RLI division on, data inverse on, Nor2Array max off
+	T-filter on binomial8, S-filter on 1
+For determining background / initial SNR cutoff:
+	Set measure window to 20 and 40
+	Baseline correction still set to 90 and 40
+	Cutoff = 95th percentile SNR
+	Remove all pixels with SNR <= cutoff (step 1)
+For analyzing second spikes:
+	If IPI = 10: measure window set to 110 and 40
+	If IPI = 20: measure window set to 130 and 40
+	If IPI = 50: measure window set to 190 and 40
+	If IPI = 100: measure window set to 290 and 40
+To be included in data set, slice must have at least 5 ROIs
+Visual files show what human eyes think of a trace:
+	1 if trace does seem like a "real" spike
+	0 if trace does not seem like a "real" spike
+	Mark folder as "notUsable" if stim1 and < 5 ROIs with visual = 1
+Trace photos:
+	Check for M only in "control" trials, then apply to all others
+		such that if M in "control" then M in all others and 
+		no M in others if not in "control"
+	Check mark if included (1 in visual file)
+	X if excluded (0 in visual file) because can't see spike
+	M if excluded (0 in visual file) because looks like multiple cells
+	For paired-pulse, if first pulse is M second must also be M or X
+	For paired-pulse, second pulse cannot be M if first is not M
+Rotation photos:
+	Translate all photos with X = between 0-150, y = 0
+	Rotation angle clockwise (same direction turns in imageJ)
+	Rotate so that L2/3 is on top
+	Save both fluor and DIC image to see if angle looks good in both
+For ACC, must have DIC image to find boundary between layers
+Rotation_distances = euclidean distance, x component and y component
+	for each ROI for unrotated (original) image
+Rotation_shifted_distances = euclidean distance, x component and y
+	component for each ROI for rotated image (so that cortical
+	layers are parallel to X axis
+Latency = half-amp latency
+Amplitude = max amp (not just amplitude)
+For data collected before stim was fixed (10-26-2020 and earlier) use
+	46.5 msec (frame 93) as "stimulation point" when calculating
+	latency or making pictures of traces
+For calculating latency: 
+	Data from 05-28-2020 through (including) 10-29-2020 had bug; 
+		stimulation shown at frame 100 but actually stimulated
+		7 (?) frames earlier
+	Data from 12-13-2020 and later; no bug - stim at frame 98

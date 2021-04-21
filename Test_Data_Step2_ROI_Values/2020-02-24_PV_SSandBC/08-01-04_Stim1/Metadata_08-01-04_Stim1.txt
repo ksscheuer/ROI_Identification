@@ -1,0 +1,9 @@
+Slice_Loc_Run	08-01-04
+Trial_x_Time	10_10
+Stim_intensity	100
+Stim_layer	
+RLI	1500
+Cx	BC
+n_Pulses	2
+Pulse_index	Stim1
+IPI	100

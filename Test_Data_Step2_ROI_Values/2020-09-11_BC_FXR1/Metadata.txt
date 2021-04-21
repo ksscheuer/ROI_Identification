@@ -1,0 +1,7 @@
+Date	09-11-2020
+Id	169211
+Genotype	FXR1
+Birthdate	53 wks
+Sex	F
+Tx	FXR1_KO
+Tx_Start	NA

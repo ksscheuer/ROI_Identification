@@ -1,0 +1,8 @@
+1	2_3
+2	Edge
+3	4
+4	Edge
+5	2_3
+6	4
+7	Edge
+8	Edge

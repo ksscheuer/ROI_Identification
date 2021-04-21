@@ -1,0 +1,7 @@
+Trial_x_Time	5_15
+Stim_intensity	100
+Stim_layer	Edge
+RLI		0.6
+Cx		Barrel
+n_Pulses	1
+IPI		NA
