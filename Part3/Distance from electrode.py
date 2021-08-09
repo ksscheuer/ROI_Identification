@@ -4,9 +4,10 @@ import numpy
 
 # print('test')
 
-ROIs_dat = pd.read_csv('ROIs_1_to_43.dat',header=None)
-# print(ROIs_dat.head())
-angle_deg_clock = 40
+ROIs_dat = pd.read_csv('ROIs_1_to_120.dat',header=None)
+print(ROIs_dat.head())
+angle_deg_clock = 65
+
 angle_deg = 360-angle_deg_clock #formula below needs angle in counterclockwise, imageJ rotates clockwise
 
 ### Find tip of electrode ###
@@ -34,7 +35,6 @@ electrode_tip_ycoord = avg_ycoord
 
 ### Find coords for each ROI ###
 nROIs = ROIs_dat[0][0]
-# nROIs = 42
 # print(nROIs)
 
 ROI_row_index_breaks = []
@@ -64,6 +64,7 @@ for ROI_Id in range(0,nROIs): #counts from 0 to 1-nROIS
 
 ROI_distances_list = []
 for ROI_Id in range(0,nROIs):
+    # print("ROI_Id is ",ROI_Id)
     if ROI_Id == nROIs-1: # if last ROI in list
         ROI_pixelIds = ROIs_dat[0][range(ROI_row_index_breaks[ROI_Id], len(ROIs_dat))]
         # print(ROI_pixelIds)
@@ -83,9 +84,12 @@ for ROI_Id in range(0,nROIs):
         ROI_ydistance_list.append(pixel_ydistance)
         pixel_euc_distance = math.sqrt(pixel_xdistance**2 + pixel_ydistance**2)
         ROI_euc_distance_list.append(pixel_euc_distance)
-        # print(pixel_xcoord,pixel_ycoord)
+        # print("Pixel is ",pixel,", X is ",pixel_xcoord,", Y is ",pixel_ycoord)
+        # print("electrode_tip_xcoord is ",electrode_tip_xcoord)
         # print(pixel_xdistance,pixel_ydistance,pixel_euc_distance)
+    # print("ROI_xdistance_list is ", ROI_xdistance_list)
     # print(ROI_xdistance_list,ROI_ydistance_list)
+    # print(ROI_xdistance_list)
     ROI_xdistance = sum(ROI_xdistance_list) / len(ROI_xdistance_list)
     ROI_ydistance = sum(ROI_ydistance_list) / len(ROI_ydistance_list)
     ROI_euc_distance = sum(ROI_euc_distance_list) / len(ROI_euc_distance_list)

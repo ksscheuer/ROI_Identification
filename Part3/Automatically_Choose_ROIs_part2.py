@@ -8,6 +8,7 @@ np.set_printoptions(threshold=np.inf) #print all values in numpy array
 
 ROI_diameter_cutoff = 3 #2 if using 10x lens, 3 if using 20x
 SNR_cutoff = 5
+# SNR_cutoff = 15
 Amp_cutoff = 0.001
 rlimit = 5000 #recursion limit (for identifying all potential ROIs)
 
@@ -113,13 +114,13 @@ def check_collisions(x,y,group_index):
       yup = max(0, y-1)
       ydown = min(height-1, y+1)
       check_collisions(x,yup,cell_value)
-      check_collisions(xleft,yup,cell_value)
+      # check_collisions(xleft,yup,cell_value)
       check_collisions(xleft,y,cell_value)
-      check_collisions(xleft,ydown,cell_value)
+      # check_collisions(xleft,ydown,cell_value)
       check_collisions(x,ydown,cell_value)
-      check_collisions(xright,ydown,cell_value)
+      # check_collisions(xright,ydown,cell_value)
       check_collisions(xright,y,cell_value)
-      check_collisions(xright,yup,cell_value)
+      # check_collisions(xright,yup,cell_value)
     else:
       # print ("Found collision",group_index,cell_value)
       cluster_results[cluster_results == group_index] = 0
@@ -219,7 +220,7 @@ plt.set_cmap("hsv")
 # plt.show()
 plt.savefig("All_Potential_ROIs.jpg")
 
-# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="All_Potential_ROIs_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=200,dat_file_name="All_Potential_ROIs_")
 
 ####################################### Remove ROIs with diameter > cutoff #############################################
 
@@ -242,12 +243,12 @@ plt.set_cmap("hsv")
 # plt.show()
 plt.savefig("ROIS_Diameter_Within_Cutoff.jpg")
 
-# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_Diameter_Within_Cutoff_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=200,dat_file_name="ROIs_Diameter_Within_Cutoff_")
 
 ########################################### Keep ROIs with SNR > cutoff ################################################
 
 cluster_results = snr_above_cutoff(width=width,height=height,snr_data=snr_data,cluster_results=cluster_results)
-# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_With_SNR_Greater_Than_Cutoff_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=400,dat_file_name="ROIs_With_SNR_Greater_Than_Cutoff_")
 
 
 ########################################### Keep ROIs with Amp > cutoff ################################################
@@ -313,8 +314,12 @@ plt.savefig("ROIs_Not_Touching.jpg")
 ############################################ Plot final ROIs and electrode #############################################
 
 produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=50,dat_file_name="ROIs_")
+produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=100,dat_file_name="ROIs_")
 produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=300,dat_file_name="ROIs_")
 produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=5,dat_file_name="ROIs_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=10,dat_file_name="ROIs_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=20,dat_file_name="ROIs_")
+# produce_dat_files(width=width,height=height,trace_data=cluster_results,n_rois_per_file=1,dat_file_name="ROIs_")
 produce_dat_files(width=width,height=height,trace_data=electrode_data,n_rois_per_file=1,dat_file_name="Electrode")
 
 for i in range(0,width): #add electrode as new "roi"

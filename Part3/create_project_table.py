@@ -12,7 +12,7 @@ for dirName, subdirList, fileList in os.walk(".",topdown=True):
             current_animal = pd.read_csv(file,names=["Date","Id","Genotype","Birthdate","Sex","Tx","Tx_Start",
                                                      "Slice_Loc_Run","Trial_x_Time","Stim_Intensity","Stim_Layer",
                                                      "RLI","Cx","n_Pulses","Pulse_index","IPI","ROI_Id",
-                                                     # "Visual","Layers",
+                                                     "Visual","Layers",
                                                      "Amp","SNR","Latency","Halfwidth",'X_dist','Y_dist',
                                                      'Euc_dist','X_shift_dist','Y_shift_dist','Euc_shift_dist'])
             # print(current_animal)

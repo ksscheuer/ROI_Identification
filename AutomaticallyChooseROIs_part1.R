@@ -21,6 +21,7 @@ xdim <- 80 #pixels in X direction
 ydim <- 80 #pixels in Y direction
 
 # @PARAM SNRcutoff_choice
+# SNRcutoff_choice <- 4 #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
 SNRcutoff_choice <- "RMS" #add RMS noise (sqrt(mean(prestim_data$Avg^2)))
   #can be pre-set value eg 4, "pre-stim mean" for the mean of the SNR values
   #before stimulus, "pre-stim 95%ile" for 95th percentile of SNR values
@@ -33,8 +34,9 @@ k_choice <- "automatic"
   #can be pre-set value or automatically determined based on BIC (see
   #Ckmeans.1d.dp package for details)
 
-# @PARAM cluster_SNRcutoff  
+# @PARAM cluster_SNRcutoff
 cluster_SNRcutoff <- 5 #remove clusters with average SNR < cutoff
+# cluster_SNRcutoff <- 7 #remove clusters with average SNR < cutoff
 
 
 ########################### Load input files ###############################
@@ -58,7 +60,7 @@ snr_filenames <- list.files(pattern=".txt")[str_detect(list.files(pattern=".txt"
 
 # @BEGIN average_prestim
 # @IN preStim_data_files @URI file:*_preStim.txt
-# @OUT prestim_data 
+# @OUT prestim_data
 # @END average_prestim
 
 prestim_data <- data.frame(matrix(nrow=xdim*ydim,ncol=length(prestim_filenames)+1))
@@ -193,7 +195,8 @@ if (SNRcutoff_choice == "pre-stim mean") {
 #plot SNR values for each file and the overall average
 snr_coords_data <- data.frame(rep(1:ydim,xdim),rep(1:ydim,each=xdim),snr_data)
 colnames(snr_coords_data) <- c("X","Y",colnames(snr_data))
-for (i in 3:ncol(snr_coords_data)+2) {
+for (i in 3:ncol(snr_coords_data)) {
+# for (i in 3:ncol(snr_coords_data)+2) {
   ggplot(snr_coords_data,aes(x=X,y=Y)) +
     geom_tile(aes(fill=snr_coords_data[,i])) +
     labs(title=paste(colnames(snr_coords_data)[i]," SNR")) +
@@ -433,3 +436,4 @@ warnings()
 # @END Part1
 ###########################################################################################
 ###########################################################################################
+
