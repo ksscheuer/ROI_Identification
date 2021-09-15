@@ -38,9 +38,12 @@ for folder in keep_folderList:
         #     print('break')
     # print(folder)
     # print(current_fileList)
-    amp_file = [file for file in current_fileList if 'Amp' in file]
+    amp_file = [file for file in current_fileList if 'Amp_' in file]
     amp_name = folder + str(amp_file).replace("['", "\\")
     amp_name = amp_name.replace("']", "")
+    peaktime_file = [file for file in current_fileList if 'PeakTime' in file]
+    peaktime_name = folder + str(peaktime_file).replace("['", "\\")
+    peaktime_name = peaktime_name.replace("']", "")
     snr_file = [file for file in current_fileList if 'SNR' in file]
     snr_name = folder + str(snr_file).replace("['", "\\")
     snr_name = snr_name.replace("']", "")
@@ -69,6 +72,7 @@ for folder in keep_folderList:
     # print(amp_name,snr_name,latency_name,halfwidth_name,distance_orig_name,distance_shift_name,layers_name,visual_name,metadata_name)
 
     amp = pd.read_csv(amp_name, sep='\t',names=["ROI_Id","Amp"])
+    peaktime = pd.read_csv(peaktime_name, sep='\t',names=["ROI_Id","PeakTime"])
     snr = pd.read_csv(snr_name, sep='\t',names=["ROI_Id","SNR"])
     latency = pd.read_csv(latency_name, sep='\t',names=["ROI_Id","Latency"])
     halfwidth = pd.read_csv(halfwidth_name, sep='\t',names=["ROI_Id","Halfwidth"])
@@ -95,6 +99,7 @@ for folder in keep_folderList:
             "Visual":visual["Visual"],
             "Layers":layers["Layers"],
             "Amp":amp["Amp"],
+            "PeakTime":peaktime["PeakTime"],
             "SNR":snr["SNR"],
             "Latency":latency["Latency"],
             "Halfwidth":halfwidth["Halfwidth"],
@@ -108,7 +113,7 @@ for folder in keep_folderList:
     df = pd.DataFrame(data,columns=["Slice_Loc_Run","Trial_x_Time","Stim_Intensity","Stim_Layer",
                                     "RLI","Cx","n_Pulses","Pulse_index","IPI","ROI_Id",
                                     "Visual","Layers",
-                                    "Amp","SNR","Latency","Halfwidth",'Dist_Orig_X',
+                                    "Amp","PeakTime","SNR","Latency","Halfwidth",'Dist_Orig_X',
                                     "Dist_Orig_Y","Dist_Orig_Euc","Dist_Shift_X","Dist_Shift_Y",
                                     "Dist_Shift_Euc"])
 
@@ -150,7 +155,7 @@ for dirName, subdirList, fileList in os.walk(".",topdown=True):
                                                     "Stim_Layer","RLI","Cx","n_Pulses","Pulse_index",
                                                     "IPI","ROI_Id",
                                                     "Visual","Layers",
-                                                    "Amp","SNR",
+                                                    "Amp","PeakTime","SNR",
                                                     "Latency","Halfwidth",'X_dist',"Y_dist","Euc_dist",
                                                     'X_shift_dist',"Y_shift_dist","Euc_shift_dist"])
             # print(current_slice)

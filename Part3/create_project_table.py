@@ -13,7 +13,7 @@ for dirName, subdirList, fileList in os.walk(".",topdown=True):
                                                      "Slice_Loc_Run","Trial_x_Time","Stim_Intensity","Stim_Layer",
                                                      "RLI","Cx","n_Pulses","Pulse_index","IPI","ROI_Id",
                                                      "Visual","Layers",
-                                                     "Amp","SNR","Latency","Halfwidth",'X_dist','Y_dist',
+                                                     "Amp","PeakTime","SNR","Latency","Halfwidth",'X_dist','Y_dist',
                                                      'Euc_dist','X_shift_dist','Y_shift_dist','Euc_shift_dist'])
             # print(current_animal)
             animal_list.append(current_animal)

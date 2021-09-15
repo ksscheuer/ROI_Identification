@@ -57,6 +57,7 @@ np_days =  ["04-19-2019","04-22-2019","04-30-2019","05-02-2019","05-03-2019",
             "02-13-2020","02-19-2020","02-20-2020","02-24-2020","02-25-2020",
             "02-26-2020","02-27-2020","03-23-2020","03-24-2020"]
 trimmed_df.loc[trimmed_df.Date.isin(np_days),"Latency"] -= 42
+trimmed_df.loc[trimmed_df.Date.isin(np_days),"PeakTime"] -= 42
 ###     05-28-2020 through and including 10-29-2020: from photoZ with bug (start stim at frame 96)
 pz_bug_days = ["05-28-2020","05-29-2020","06-01-2020","06-02-2020","07-02-2020",
                 "07-03-2020","07-09-2020","07-10-2020","07-11-2020","07-12-2020",
@@ -66,19 +67,22 @@ pz_bug_days = ["05-28-2020","05-29-2020","06-01-2020","06-02-2020","07-02-2020",
                 "09-15-2020","09-16-2020","09-17-2020","10-01-2020","10-02-2020",
                 "10-05-2020","10-26-2020","10-27-2020","10-28-2020","10-29-2020"]
 trimmed_df.loc[trimmed_df.Date.isin(pz_bug_days),"Latency"] -= 48
+trimmed_df.loc[trimmed_df.Date.isin(pz_bug_days),"PeakTime"] -= 48
 
 ###     12-13-2020 through and including 12-17-2020: from photoZ with bug (start stim at frame 95)
 pz_bug_days2 = ["12-13-2020","12-14-2020","12-15-2020","12-17-2020"]
 trimmed_df.loc[trimmed_df.Date.isin(pz_bug_days2),"Latency"] -= 47.5
+trimmed_df.loc[trimmed_df.Date.isin(pz_bug_days2),"PeakTime"] -= 47.5
 
 ###     12-28-2020 and later: from photoZ without bug (stim at frame 94)
-pz_no_bug_days = ["12-13-2020","12-14-2020","12-15-2020","12-17-2020","12-28-2020",
-                  "12-29-2020","01-11-2021","01-18-2021","01-19-2021","03-02-2021",
+pz_no_bug_days = ["12-28-2020","12-29-2020","01-11-2021","01-18-2021","01-19-2021","03-02-2021",
                   "03-09-2021","03-23-2021","04-13-2021","05-25-2021","05-26-2021",
-                  "05-31-2021","06-28-2021","06-29-2021","07-29-2021"]
+                  "05-31-2021","06-28-2021","06-29-2021","07-29-2021","08-06-2021",
+                  "08-09-2021","08-10-2021","08-31-2021","09-06-2021","09-08-2021"]
 # pz_no_bug_days = trimmed_df[~trimmed_df.Date.isin(pz_bug_days)]["Date"].unique()
 # print("pz_no_bug_days is ",pz_no_bug_days)
 trimmed_df.loc[trimmed_df.Date.isin(pz_no_bug_days),"Latency"] -= 47
+trimmed_df.loc[trimmed_df.Date.isin(pz_no_bug_days),"PeakTime"] -= 47
 
 ########################################################################################################################
 #######################################  Add intra/interlaminar column #################################################
@@ -121,7 +125,7 @@ stim1_df = stim1_df.groupby(list(stim1_df['Full_ROI_Id']),sort=False).agg(
      'ROI_Id': lambda x: x.iloc[0],'Laminar': lambda x: x.iloc[0],
      'Visual': lambda x: x.iloc[0],
      'Layers': lambda x: x.iloc[0],
-     'Amp':'mean','SNR':'mean','Latency':'mean','Halfwidth':'mean',
+     'Amp':'mean','PeakTime':'mean','SNR':'mean','Latency':'mean','Halfwidth':'mean',
      'X_dist':'mean','Y_dist':'mean','Euc_dist':'mean','X_shift_dist':'mean','Y_shift_dist':'mean',
      'Euc_shift_dist':'mean'})
 # print(stim1_df)
